@@ -10,6 +10,6 @@ read -p "Ingresa el mensaje de commit: " commit_message
 git commit -m "$commit_message"
 
 # Sube los cambios a GitHub, lo que activará el flujo de trabajo de Docker
-git push origin main # O el nombre de tu rama principal
+git push origin master # O el nombre de tu rama principal
 
 echo "Cambios subidos a GitHub. La imagen de Docker se está construyendo."
