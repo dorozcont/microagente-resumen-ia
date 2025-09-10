@@ -3,7 +3,7 @@ name: Automatic Versioning
 on:
   push:
     branches:
-      - main # Asegúrate de que esta sea tu rama principal, podría ser 'master'
+      - master # Asegúrate de que esta sea tu rama principal, podría ser 'master'
 
 jobs:
   version:
