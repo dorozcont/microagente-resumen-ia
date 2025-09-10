@@ -1,0 +1,24 @@
+name: Automatic Versioning
+
+on:
+  push:
+    branches:
+      - main # Asegúrate de que esta sea tu rama principal, podría ser 'master'
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Auto-versioning
+        id: bump_version
+        uses: anothrNick/github-tag-action@1.36.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WITH_V: true
+          DEFAULT_BUMP: patch
+          
+      - name: Print new version
+        run: echo "New version is ${{ steps.bump_version.outputs.new_version }}"
