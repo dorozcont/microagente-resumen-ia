@@ -14,7 +14,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
         with:
-          fetch-depth: '0' # Esto es necesario para que el versionado funcione correctamentee
+          fetch-depth: '0' # Esto es necesario para que el versionado funcione correctamente
 
       - name: Automatic Versioning
         id: bump_version
