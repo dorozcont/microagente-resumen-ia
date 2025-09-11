@@ -16,4 +16,6 @@ EXPOSE 7860
 
 # Comando para ejecutar la aplicación cuando el contenedor se inicie
 # CMD ["python", "app.py"]
+
+RUN chmod +x ./start.sh
 CMD ["./start.sh"]
