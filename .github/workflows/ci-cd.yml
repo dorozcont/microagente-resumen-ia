@@ -39,4 +39,4 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/microagente-resumen:${{ env.VERSION }}
+          tags: ${{ secrets.DOCKER_USERNAME }}/microagente-resumen-ia:${{ env.VERSION }}
