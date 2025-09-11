@@ -55,4 +55,8 @@ iface = gr.Interface(
     description="Pegue el texto de un incidente de TI y reciba un resumen conciso y enriquecido en formato JSON."
 )
 
-iface.launch(share=False)
+iface.launch(
+    server_name="0.0.0.0",
+    server_port=7860,
+    share=False
+)
