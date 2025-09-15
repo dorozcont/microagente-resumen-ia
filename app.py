@@ -9,7 +9,7 @@ summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
 
 def classify_incident_type(text):
     """
-    Clasifica el tipo de incidente basándose en palabras clave en el texto.
+    Clasifica el tipo de incidente basándose en palabras clave en el texto .
     """
     text_lower = text.lower()
     
