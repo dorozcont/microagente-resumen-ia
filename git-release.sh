@@ -1,15 +1,47 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -e
 
-# Añade todos los archivos modificados
+# Asegura que tenemos las últimas refs/tags
+git fetch origin --tags
+
+# 1) Detectar cambios
+CHANGED=$(git status --short | awk '{print $2}')
+if [ -z "$CHANGED" ]; then
+  echo "⚠️ No hay cambios detectados."
+  exit 1
+fi
+
+# 2) Mensaje de commit
+read -rp "📝 Escribe el mensaje de commit: " COMMIT_MSG
+
+# 3) Tomar la ÚLTIMA versión estable desde main (no hardcodeamos 1.0.*)
+BASE_TAG=$(git describe --tags --abbrev=0 origin/main 2>/master/null || echo "v1.0.0")
+BASE_NUM=${BASE_TAG#v}
+IFS='.' read -r MAJOR MINOR PATCH <<<"$BASE_NUM"
+
+# 4) Nuevo tag en master = mismo MAJOR.MINOR de main, PATCH+1
+NEW_PATCH=$((PATCH + 1))
+NEW_TAG="v${MAJOR}.${MINOR}.${NEW_PATCH}"
+
+# 5) Resumen
+echo ""
+echo "🚀 Preparando release..."
+echo "   Archivos a commitear:"
+echo "$CHANGED" | sed 's/^/     • /'
+echo "   Branch destino: master"
+echo "   Commit:         $COMMIT_MSG"
+echo "   Base (main):    $BASE_TAG"
+echo "   Nuevo tag:      $NEW_TAG"
+echo ""
+read -rp "❓ ¿Proceder con estos cambios? (y/n): " CONFIRM
+[ "$CONFIRM" = "y" ] || { echo "❌ Operación cancelada."; exit 1; }
+
+# 6) Ejecutar pipeline
 git add .
+git commit -m "$COMMIT_MSG" || echo "⚠️ No hay cambios que commitear"
+git push origin master
 
-# Pregunta por un mensaje de commit
-read -p "Ingresa el mensaje de commit: " commit_message
+git tag "$NEW_TAG"
+git push origin "$NEW_TAG"
 
-# Realiza el commit
-git commit -m "$commit_message"
-
-# Sube los cambios a GitHub, lo que activará el flujo de trabajo de Docker
-git push origin master # O el nombre de tu rama principal
-
-echo "Cambios subidos a GitHub. La imagen de Docker se está construyendo."
+echo "✅ Commit y tag $NEW_TAG publicados correctamente (branch master)."
