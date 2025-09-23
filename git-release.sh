@@ -14,12 +14,12 @@ fi
 # 2) Mensaje de commit
 read -rp "📝 Escribe el mensaje de commit: " COMMIT_MSG
 
-# 3) Tomar la ÚLTIMA versión estable desde main (no hardcodeamos 1.0.*)
-BASE_TAG=$(git describe --tags --abbrev=0 origin/main 2>/master/null || echo "v1.0.0")
+# 3) Tomar la ÚLTIMA versión estable desde master
+BASE_TAG=$(git describe --tags --abbrev=0 origin/master 2>/dev/null || echo "v1.0.0")
 BASE_NUM=${BASE_TAG#v}
 IFS='.' read -r MAJOR MINOR PATCH <<<"$BASE_NUM"
 
-# 4) Nuevo tag en master = mismo MAJOR.MINOR de main, PATCH+1
+# 4) Nuevo tag en master = mismo MAJOR.MINOR, PATCH+1
 NEW_PATCH=$((PATCH + 1))
 NEW_TAG="v${MAJOR}.${MINOR}.${NEW_PATCH}"
 
@@ -30,7 +30,7 @@ echo "   Archivos a commitear:"
 echo "$CHANGED" | sed 's/^/     • /'
 echo "   Branch destino: master"
 echo "   Commit:         $COMMIT_MSG"
-echo "   Base (main):    $BASE_TAG"
+echo "   Base (master):    $BASE_TAG"
 echo "   Nuevo tag:      $NEW_TAG"
 echo ""
 read -rp "❓ ¿Proceder con estos cambios? (y/n): " CONFIRM

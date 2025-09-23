@@ -1,0 +1,71 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env
+.env.*
+.envrc
+
+# Editor/IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# Logs
+*.log
+*.log.*
+logs/
+
+# Shared libs / bins pesados
+*.so
+*.dll
+*.dylib
+
+# Modelos y cachés (genérico en repo)
+models/
+.cache/
+**/.cache/
+**/.cache/huggingface/
+*.pt
+*.pth
+*.ckpt
+*.gguf
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Datos
+data/
+datasets/
+*.csv
+*.tsv
+*.parquet
+*.db
+*.sqlite
+
+# Herramientas de test/typing/coverage
+.tox/
+.nox/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Temporales / backups
+*.tmp
+*.swp
+*~
+*.bak
+* copy.*
+
+
+* copy.*
+*.bak
