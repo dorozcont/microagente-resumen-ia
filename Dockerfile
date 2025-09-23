@@ -14,8 +14,8 @@ COPY . .
 # Expone el puerto 7860, que es el que usa Gradio por defecto
 EXPOSE 7860
 
-# Comando para ejecutar la aplicación cuando el contenedor se inicie
-# CMD ["python", "app.py"]
-
+# Asegura que el script de inicio tenga permisos de ejecución
 RUN chmod +x ./start.sh
+
+# Comando para ejecutar la aplicación cuando el contenedor se inicie
 CMD ["./start.sh"]
