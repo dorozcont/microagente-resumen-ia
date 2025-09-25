@@ -51,7 +51,7 @@ def summarize_incident(text_input):
         num_beams=4        # Estrategia de búsqueda para una mejor calidad
     )
     
-    # Clasifica el tipo de incidente.
+    # Clasifica el tipo de incidente
     incident_type = classify_incident_type(text_input)
     
     # Formatea la salida como un JSON enriquecido
