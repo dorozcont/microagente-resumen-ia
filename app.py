@@ -3,9 +3,20 @@
 from transformers import pipeline
 import gradio as gr
 from utils import format_as_json
+import torch
 
-# Carga el modelo de resumen.
-summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
+# --- DETECCIÓN DE GPU Y CARGA DE MODELO ---
+# Determina el dispositivo: usa la primera GPU (0) si CUDA está disponible, sino usa CPU (-1)
+# Ya confirmamos que torch.cuda.is_available() es True.
+device_id = 0 if torch.cuda.is_available() else -1
+print(f"DEBUG: El pipeline usará el dispositivo: {'GPU (ID 0)' if device_id == 0 else 'CPU'}")
+
+# Carga el modelo de resumen, forzando el uso del dispositivo detectado.
+summarizer = pipeline(
+    "summarization", 
+    model="facebook/bart-large-cnn",
+    device=device_id # <--- MODIFICACIÓN CRÍTICA: Fuerza el uso de la GPU
+)
 
 def classify_incident_type(text):
     """
