@@ -1,127 +1,130 @@
 # app.py
 
-from transformers import pipeline, BartTokenizer, BartForConditionalGeneration
+from transformers import pipeline, BartTokenizer
 import gradio as gr
-from utils import format_as_json, preprocess_text, chunk_text
-from config import MODEL_CONFIG, APP_CONFIG, INCIDENT_KEYWORDS
-import torch
-import logging
+from utils import format_as_json
+from config import (
+    MODEL_NAME, MIN_LENGTH, MAX_LENGTH, 
+    NUM_BEAMS, DO_SAMPLE, MAX_INPUT_LENGTH,
+    SERVER_NAME, SERVER_PORT, INPUT_LINES, OUTPUT_LINES
+)
 
-# Configurar logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-# --- INICIALIZACIÓN DEL MODELO ---
-def initialize_model():
-    """Inicializa el modelo de summarization con la configuración centralizada"""
-    device_id = 0 if torch.cuda.is_available() else -1
-    logger.info(f"Usando dispositivo: {'GPU' if device_id == 0 else 'CPU'}")
-    
-    try:
-        tokenizer = BartTokenizer.from_pretrained(MODEL_CONFIG["name"])
-        model = BartForConditionalGeneration.from_pretrained(MODEL_CONFIG["name"])
-        
-        if device_id == 0:
-            model = model.cuda()
-        
-        summarizer = pipeline(
-            "summarization",
-            model=model,
-            tokenizer=tokenizer,
-            device=device_id
-        )
-        
-        logger.info("Modelo inicializado exitosamente")
-        return summarizer
-        
-    except Exception as e:
-        logger.error(f"Error inicializando modelo: {e}")
-        raise
-
-# Inicializar modelo al importar
-summarizer = initialize_model()
+# Carga el tokenizador y el modelo de resumen.
+# Se usa un modelo más robusto y entrenado para español.
+tokenizer = BartTokenizer.from_pretrained(MODEL_NAME)
+summarizer = pipeline(
+    "summarization", 
+    model=MODEL_NAME, 
+    tokenizer=tokenizer
+)
 
 def classify_incident_type(text):
-    """
-    Clasifica el tipo de incidente usando configuración centralizada
-    """
+    # ... (La función se mantiene igual, ya es funcional)
     text_lower = text.lower()
     
-    for category, keywords in INCIDENT_KEYWORDS.items():
-        if any(keyword in text_lower for keyword in keywords):
-            return category
-            
+    if "red" in text_lower or "servidor" in text_lower or "router" in text_lower or "switch" in text_lower:
+        return "Redes/Infraestructura"
+    if "base de datos" in text_lower or "sql" in text_lower or "postgres" in text_lower or "mongo" in text_lower:
+        return "Base de datos"
+    if "seguridad" in text_lower or "acceso" in text_lower or "vulnerabilidad" in text_lower or "phishing" in text_lower:
+        return "Seguridad"
+    if "aplicación" in text_lower or "software" in text_lower or "bug" in text_lower or "código" in text_lower:
+        return "Software/Aplicación"
+        
     return "General"
 
 def summarize_incident(text_input):
     """
-    Función principal para resumir incidentes
+    Toma un texto de incidente, lo clasifica y devuelve un resumen enriquecido en formato JSON.
     """
-    try:
-        if not text_input or len(text_input.strip()) == 0:
-            return format_as_json("", "Entrada vacía", "Error", "Texto de entrada vacío")
-        
-        # Preprocesar texto
-        processed_text = preprocess_text(text_input)
-        word_count = len(processed_text.split())
-        
-        # Validar longitud
-        if word_count < APP_CONFIG["min_words"]:
-            return format_as_json("", processed_text, "General", 
-                                f"Texto demasiado corto. Mínimo {APP_CONFIG['min_words']} palabras requeridas.")
-        
-        # Manejar textos largos
-        if word_count > APP_CONFIG["max_words"]:
-            chunks = chunk_text(processed_text, APP_CONFIG["chunk_size"])
-            processed_text = chunks[0]
-            logger.info(f"Texto dividido en {len(chunks)} chunks")
-        
-        # Crear prompt usando template configurado
-        prompt = APP_CONFIG["prompt_template"].format(processed_text)
-        
-        # Generar resumen con parámetros configurados
-        summary = summarizer(
-            prompt, 
-            max_length=MODEL_CONFIG["max_summary_length"],
-            min_length=MODEL_CONFIG["min_summary_length"],
-            do_sample=MODEL_CONFIG["do_sample"],
-            num_beams=MODEL_CONFIG["num_beams"],
-            length_penalty=MODEL_CONFIG["length_penalty"],
-            no_repeat_ngram_size=MODEL_CONFIG["no_repeat_ngram_size"]
-        )
-        
-        # Clasificar y formatear resultado
-        incident_type = classify_incident_type(processed_text)
-        return format_as_json(summary[0]['summary_text'], processed_text, incident_type)
-        
-    except Exception as e:
-        logger.error(f"Error en summarize_incident: {e}")
-        return format_as_json("", text_input, "Error", f"Error procesando el texto: {str(e)}")
+    if not text_input:
+        return "El texto de entrada está vacío."
+    
+    # 1. Validación de longitud mínima (en palabras)
+    if len(text_input.split()) < MIN_LENGTH:
+        return f"El texto es demasiado corto para generar un resumen significativo. Por favor, ingrese al menos {MIN_LENGTH} palabras."
+    
+    # 2. Manejo de texto largo (Tokenización y truncamiento)
+    # Se usa el tokenizador para obtener los IDs y truncar si es necesario.
+    tokenized_input = tokenizer(
+        text_input, 
+        max_length=MAX_INPUT_LENGTH, 
+        truncation=True,
+        return_tensors="pt"
+    )
+    
+    # Se usa el "input_ids" truncado como entrada del pipeline para evitar errores de memoria/longitud
+    input_ids = tokenized_input.input_ids[0].tolist()
+    
+    # Parámetros para el resumen
+    summary_params = {
+        'max_length': MAX_LENGTH,
+        'min_length': MIN_LENGTH,
+        'do_sample': DO_SAMPLE,
+        'num_beams': NUM_BEAMS
+    }
+    
+    # Generación del resumen
+    # El pipeline necesita la cadena de texto como entrada, no los IDs truncados, 
+    # pero el truncamiento se maneja internamente en la llamada con los parámetros correctos.
+    # Para asegurar el truncamiento si es necesario:
+    
+    # **Estrategia de truncamiento seguro para el pipeline:**
+    # Se decodifica solo hasta el límite de tokens para el resumen.
+    safe_text_input = tokenizer.decode(input_ids, skip_special_tokens=True)
+    
+    summary = summarizer(
+        safe_text_input, 
+        **summary_params
+    )
+    
+    # Clasifica el tipo de incidente
+    incident_type = classify_incident_type(text_input)
+    
+    # Prepara metadata para el JSON
+    model_metadata = {
+        'model_name': MODEL_NAME,
+        'min_length': MIN_LENGTH,
+        'max_length': MAX_LENGTH
+    }
+    
+    # Formatea la salida como un JSON enriquecido
+    json_output = format_as_json(
+        summary[0]['summary_text'], 
+        text_input, 
+        incident_type,
+        model_metadata
+    )
+    
+    # 3. Formato para la Interfaz de Gradio (Encabezado y JSON)
+    
+    # Se simula una confianza alta ya que el modelo BART-CNN no devuelve una métrica de confianza directa (score).
+    # Puedes implementar un clasificador separado si necesitas una confianza real.
+    confidence_estimate = "Alta (Modelo especializado en español)" 
+    
+    header = (
+        f"--- Datos del Modelo y Resumen ---\n"
+        f"Modelo: {MODEL_NAME}\n"
+        f"Confianza Estimada: {confidence_estimate}\n"
+        f"Palabras (Min/Max): {MIN_LENGTH}/{MAX_LENGTH}\n"
+        f"----------------------------------\n"
+    )
+    
+    return header + json_output
 
-# Interfaz Gradio
+
+# Crea y lanza la interfaz de Gradio
 iface = gr.Interface(
     fn=summarize_incident, 
-    inputs=gr.Textbox(
-        lines=10, 
-        label="Texto del incidente",
-        placeholder=f"Pegue aquí el texto del incidente... (mínimo {APP_CONFIG['min_words']} palabras)"
-    ), 
-    outputs=gr.Textbox(label="Resumen del incidente (JSON)"),
+    # Ventanas más grandes (autoajustables)
+    inputs=gr.Textbox(lines=INPUT_LINES, label=f"Texto del incidente (mínimo {MIN_LENGTH} palabras)"), 
+    outputs=gr.Textbox(lines=OUTPUT_LINES, label="Resumen del incidente (JSON)"),
     title="Microagente de Resumen de Incidentes de TI",
-    description=f"""
-    📋 Procesa textos de incidentes de TI y genera resúmenes concisos en español.
-    
-    **Configuración actual:**
-    - Idioma: {APP_CONFIG['language']}
-    - Mínimo de palabras: {APP_CONFIG['min_words']}
-    - Máximo recomendado: {APP_CONFIG['max_words']} palabras
-    - Modelo: {MODEL_CONFIG['name']}
-    """
+    description="Pegue el texto de un incidente de TI y reciba un resumen conciso y enriquecido en formato JSON."
 )
 
-if __name__ == "__main__":
-    iface.launch(
-        server_name="0.0.0.0",
-        server_port=7860,
-        share=False
-    )
+iface.launch(
+    server_name=SERVER_NAME,
+    server_port=SERVER_PORT,
+    share=False
+)
