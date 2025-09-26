@@ -1,85 +1,79 @@
 # utils.py
 import json
 import re
-from datetime import datetime
-from config import REGEX_PATTERNS
-
-def preprocess_text(text):
-    """Preprocesa el texto para mejorar la calidad del resumen"""
-    text = text.strip()
-    text = ' '.join(text.split())  # Normalizar espacios
-    return text
-
-def chunk_text(text, max_tokens=800):
-    """Divide texto muy largo en chunks manejables"""
-    words = text.split()
-    chunks = []
-    current_chunk = []
-    current_length = 0
-    
-    for word in words:
-        word_tokens = len(word) // 4 + 1  # Estimación mejorada
-        
-        if current_length + word_tokens > max_tokens:
-            chunks.append(' '.join(current_chunk))
-            current_chunk = [word]
-            current_length = word_tokens
-        else:
-            current_chunk.append(word)
-            current_length += word_tokens
-    
-    if current_chunk:
-        chunks.append(' '.join(current_chunk))
-    
-    return chunks
+from config import REGEX_PATTERNS 
 
 def extract_entities(text):
-    """Extrae entidades usando patrones configurados"""
-    entities = {
-        'servers': [], 'incident_ids': [], 'times': [],
-        'dates': [], 'ips': [], 'applications': []
-    }
+    """
+    Extrae entidades clave como servidores, IPs, incident_id y tiempos del texto.
+    """
+    entities = {}
 
-    # Extracción usando patrones configurados
-    for entity_type, patterns in REGEX_PATTERNS.items():
-        for pattern in patterns:
-            matches = re.findall(pattern, text, re.IGNORECASE)
-            for match in matches:
-                if isinstance(match, tuple):
-                    # Para grupos de captura, tomar el primer grupo no vacío
-                    valid_matches = [m for m in match if m and str(m).strip()]
-                    if valid_matches:
-                        entities[entity_type].extend(valid_matches)
-                else:
-                    entities[entity_type].append(match)
+    # Expresión regular para encontrar recursos
+    server_matches = re.findall(REGEX_PATTERNS['resources'], text, re.IGNORECASE)
+    # Se aplana la lista de tuplas si hay grupos de captura
+    servers = list(set([match[0] if isinstance(match, tuple) else match for match in server_matches]))
+    if servers:
+        entities['resources'] = servers 
 
-    # Eliminar duplicados y vacíos
-    for key in entities:
-        entities[key] = list(set([item for item in entities[key] if item and str(item).strip()]))
+    # Expresión regular para encontrar IPs
+    ip_matches = re.findall(REGEX_PATTERNS['ips'], text)
+    if ip_matches:
+        entities['ips'] = list(set(ip_matches))
+
+    # Expresión regular para encontrar IDs de incidentes
+    id_matches = re.findall(REGEX_PATTERNS['incident_id'], text, re.IGNORECASE)
+    if id_matches:
+        entities['incident_id'] = list(set(id_matches))
+
+    # Expresión regular para encontrar horarios
+    time_matches = re.findall(REGEX_PATTERNS['times'], text, re.IGNORECASE)
+    if time_matches:
+        entities['times'] = list(set(time_matches))
+
+    # Conteo de entidades
+    entity_counts = {k: len(v) for k, v in entities.items()}
     
-    return entities
+    return entities, entity_counts
 
-def format_as_json(summary_text, original_text, incident_type="N/A", error_message=None):
-    """Formatea la respuesta en JSON"""
-    extracted_entities = extract_entities(original_text)
+def format_as_json(summary_text, original_text, incident_type="N/A", model_metadata={}):
+    """
+    Formatea el resumen, el texto original y las entidades en una cadena JSON
+    y agrega métricas de conteo de palabras.
+    """
+    extracted_entities, entity_counts = extract_entities(original_text)
     
+    # Métricas de conteo
+    original_words_count = len(original_text.split())
+    summary_words_count = len(summary_text.split())
+    
+    # Porcentaje de disminución
+    if original_words_count > 0:
+        reduction_percentage = round((1 - (summary_words_count / original_words_count)) * 100, 2)
+    else:
+        reduction_percentage = 0
+    
+    # Estructura de la metadata
     metadata = {
-        "processed_at": datetime.now().isoformat(),
-        "original_word_count": len(original_text.split()),
-        "summary_word_count": len(summary_text.split()) if summary_text else 0,
-        "entities_count": {key: len(value) for key, value in extracted_entities.items()}
+        "model": model_metadata.get('model_name', 'N/A'),
+        "min_words": model_metadata.get('min_length', 'N/A'),
+        "max_words": model_metadata.get('max_length', 'N/A'),
+        "original_words_count": original_words_count,
+        "summary_words_count": summary_words_count,
+        "reduction_percentage": reduction_percentage,
+        "entity_counts": entity_counts
     }
-
+    
     output = {
-        "status": "error" if error_message else "success",
+        "status": "success",
         "incident_type": incident_type,
         "summary": summary_text,
-        "original_text_preview": original_text[:500] + "..." if len(original_text) > 500 else original_text,
         "entities": extracted_entities,
         "metadata": metadata
     }
-    
-    if error_message:
-        output["error_message"] = error_message
 
-    return json.dumps(output, indent=2, ensure_ascii=False)
+    # Se mantiene el 'original_text' fuera de la salida final si no se requiere, 
+    # pero se incluye para trazabilidad si es necesario.
+    # output['original_text'] = original_text 
+
+    return json.dumps(output, indent=4, ensure_ascii=False)
