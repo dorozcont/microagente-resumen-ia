@@ -14,7 +14,7 @@ fi
 # 2) Mensaje de commit
 read -rp "📝 Escribe el mensaje de commit: " COMMIT_MSG
 
-# 3) Tomar la ÚLTIMA versión estable desde la rama de desarrollo
+# 3) Tomar la ÚLTIMA versión estable desde la rama de desarrollo.
 BASE_TAG=$(git describe --tags --abbrev=0 origin/dev 2>/dev/null || echo "v1.0.0")
 BASE_NUM=${BASE_TAG#v}
 IFS='.' read -r MAJOR MINOR PATCH <<<"$BASE_NUM"
