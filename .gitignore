@@ -1,10 +1,10 @@
-# Python cache
+# Python Caches
 __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
 
-# Virtual environments
+# Entornos Virtuales (CRÍTICO - pueden ser grandes)
 venv/
 .venv/
 env/
@@ -12,22 +12,22 @@ env/
 .env.*
 .envrc
 
-# Editor/IDE
+# Logs y Temporales
+*.log
+*.log.*
+logs/
+*.tmp
+*.swp
+*~
+*.bak
+* copy.*
+
+# Archivos de Editor/IDE
 .vscode/
 .idea/
 *.code-workspace
 
-# Logs
-*.log
-*.log.*
-logs/
-
-# Shared libs / bins pesados
-*.so
-*.dll
-*.dylib
-
-# Modelos y cachés (genérico en repo)
+# Modelos y Caches (CRÍTICO - el mayor contribuyente al tamaño)
 models/
 .cache/
 **/.cache/
@@ -37,10 +37,7 @@ models/
 *.ckpt
 *.gguf
 
-# Notebooks
-.ipynb_checkpoints/
-
-# Datos
+# Datos y Archivos de Testing
 data/
 datasets/
 *.csv
@@ -48,8 +45,6 @@ datasets/
 *.parquet
 *.db
 *.sqlite
-
-# Herramientas de test/typing/coverage
 .tox/
 .nox/
 .pytest_cache/
@@ -59,13 +54,9 @@ datasets/
 .coverage.*
 htmlcov/
 
-# Temporales / backups
-*.tmp
-*.swp
-*~
-*.bak
-* copy.*
-
-
-* copy.*
-*.bak
+# Excluir archivos de Docker y Control de Versiones
+.git
+.gitignore
+.dockerignore
+Dockerfile
+git-release.sh

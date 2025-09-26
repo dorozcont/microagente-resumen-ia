@@ -1,42 +1,85 @@
 # utils.py
 import json
 import re
+from datetime import datetime
+from config import REGEX_PATTERNS
+
+def preprocess_text(text):
+    """Preprocesa el texto para mejorar la calidad del resumen"""
+    text = text.strip()
+    text = ' '.join(text.split())  # Normalizar espacios
+    return text
+
+def chunk_text(text, max_tokens=800):
+    """Divide texto muy largo en chunks manejables"""
+    words = text.split()
+    chunks = []
+    current_chunk = []
+    current_length = 0
+    
+    for word in words:
+        word_tokens = len(word) // 4 + 1  # Estimación mejorada
+        
+        if current_length + word_tokens > max_tokens:
+            chunks.append(' '.join(current_chunk))
+            current_chunk = [word]
+            current_length = word_tokens
+        else:
+            current_chunk.append(word)
+            current_length += word_tokens
+    
+    if current_chunk:
+        chunks.append(' '.join(current_chunk))
+    
+    return chunks
 
 def extract_entities(text):
-    """
-    Extrae entidades clave como IDs, servidores y fechas del texto.
-    """
-    entities = {}
-
-    # Expresión regular para encontrar nombres de servidores/servicios (ej. "Postgres-DB-01")
-    server_matches = re.findall(r'(\b[A-Z0-9-]{3,}-\b[A-Z0-9-]{3,}|srv-[0-9a-zA-Z-]+)', text, re.IGNORECASE)
-    if server_matches:
-        entities['servers'] = list(set(server_matches))
-
-    # Expresión regular para encontrar IDs de incidentes (ej. "INC-7890", "#4321")
-    id_matches = re.findall(r'(INC-[0-9]{4}|#[0-9]{4})', text, re.IGNORECASE)
-    if id_matches:
-        entities['incident_id'] = list(set(id_matches))
-
-    # Expresión regular para encontrar horarios (ej. "10:30 a.m.", "15:45")
-    time_matches = re.findall(r'(\d{1,2}:\d{2}\s?(?:a\.m\.|p\.m\.)?)', text, re.IGNORECASE)
-    if time_matches:
-        entities['times'] = list(set(time_matches))
-
-    return entities
-
-def format_as_json(summary_text, original_text, incident_type="N/A"):
-    """
-    Formatea el resumen, el texto original y las entidades en una cadena JSON.
-    """
-    extracted_entities = extract_entities(original_text)
-
-    output = {
-        "original_text": original_text,
-        "summary": summary_text,
-        "status": "success",
-        "incident_type": incident_type,
-        "entities": extracted_entities
+    """Extrae entidades usando patrones configurados"""
+    entities = {
+        'servers': [], 'incident_ids': [], 'times': [],
+        'dates': [], 'ips': [], 'applications': []
     }
 
-    return json.dumps(output, indent=4, ensure_ascii=False)
+    # Extracción usando patrones configurados
+    for entity_type, patterns in REGEX_PATTERNS.items():
+        for pattern in patterns:
+            matches = re.findall(pattern, text, re.IGNORECASE)
+            for match in matches:
+                if isinstance(match, tuple):
+                    # Para grupos de captura, tomar el primer grupo no vacío
+                    valid_matches = [m for m in match if m and str(m).strip()]
+                    if valid_matches:
+                        entities[entity_type].extend(valid_matches)
+                else:
+                    entities[entity_type].append(match)
+
+    # Eliminar duplicados y vacíos
+    for key in entities:
+        entities[key] = list(set([item for item in entities[key] if item and str(item).strip()]))
+    
+    return entities
+
+def format_as_json(summary_text, original_text, incident_type="N/A", error_message=None):
+    """Formatea la respuesta en JSON"""
+    extracted_entities = extract_entities(original_text)
+    
+    metadata = {
+        "processed_at": datetime.now().isoformat(),
+        "original_word_count": len(original_text.split()),
+        "summary_word_count": len(summary_text.split()) if summary_text else 0,
+        "entities_count": {key: len(value) for key, value in extracted_entities.items()}
+    }
+
+    output = {
+        "status": "error" if error_message else "success",
+        "incident_type": incident_type,
+        "summary": summary_text,
+        "original_text_preview": original_text[:500] + "..." if len(original_text) > 500 else original_text,
+        "entities": extracted_entities,
+        "metadata": metadata
+    }
+    
+    if error_message:
+        output["error_message"] = error_message
+
+    return json.dumps(output, indent=2, ensure_ascii=False)
