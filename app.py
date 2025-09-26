@@ -1,6 +1,6 @@
 # app.py
 
-from transformers import pipeline, BartTokenizer
+from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM
 import gradio as gr
 from utils import format_as_json
 from config import (
@@ -10,8 +10,8 @@ from config import (
 )
 
 # Carga el tokenizador y el modelo de resumen.
-# Se usa un modelo más robusto y entrenado para español.
-tokenizer = BartTokenizer.from_pretrained(MODEL_NAME)
+# Usamos AutoTokenizer para cargar el tokenizador correcto para el modelo estable.
+tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 summarizer = pipeline(
     "summarization", 
     model=MODEL_NAME, 
@@ -19,7 +19,7 @@ summarizer = pipeline(
 )
 
 def classify_incident_type(text):
-    # ... (La función se mantiene igual, ya es funcional)
+    # Función de clasificación (se mantiene igual)
     text_lower = text.lower()
     
     if "red" in text_lower or "servidor" in text_lower or "router" in text_lower or "switch" in text_lower:
@@ -44,17 +44,21 @@ def summarize_incident(text_input):
     if len(text_input.split()) < MIN_LENGTH:
         return f"El texto es demasiado corto para generar un resumen significativo. Por favor, ingrese al menos {MIN_LENGTH} palabras."
     
-    # 2. Manejo de texto largo (Tokenización y truncamiento)
-    # Se usa el tokenizador para obtener los IDs y truncar si es necesario.
+    # 2. TRUCO PARA FORZAR EL IDIOMA ESPAÑOL (PROMPT)
+    # Esto agrega un prefix en español al texto de entrada, lo que instruye al modelo a responder en el mismo idioma.
+    spanish_prompt_prefix = "Resuma este texto del incidente de TI de forma concisa y profesional en español: "
+    input_with_prompt = spanish_prompt_prefix + text_input
+    
+    # 3. Manejo de texto largo (Tokenización y truncamiento)
     tokenized_input = tokenizer(
-        text_input, 
+        input_with_prompt, 
         max_length=MAX_INPUT_LENGTH, 
-        truncation=True,
+        truncation=True, # Trunca si excede los 1024 tokens
         return_tensors="pt"
     )
     
-    # Se usa el "input_ids" truncado como entrada del pipeline para evitar errores de memoria/longitud
-    input_ids = tokenized_input.input_ids[0].tolist()
+    # Decodificamos el input truncado para pasarlo al pipeline
+    safe_text_input = tokenizer.decode(tokenized_input.input_ids[0], skip_special_tokens=True)
     
     # Parámetros para el resumen
     summary_params = {
@@ -65,14 +69,6 @@ def summarize_incident(text_input):
     }
     
     # Generación del resumen
-    # El pipeline necesita la cadena de texto como entrada, no los IDs truncados, 
-    # pero el truncamiento se maneja internamente en la llamada con los parámetros correctos.
-    # Para asegurar el truncamiento si es necesario:
-    
-    # **Estrategia de truncamiento seguro para el pipeline:**
-    # Se decodifica solo hasta el límite de tokens para el resumen.
-    safe_text_input = tokenizer.decode(input_ids, skip_special_tokens=True)
-    
     summary = summarizer(
         safe_text_input, 
         **summary_params
@@ -89,24 +85,24 @@ def summarize_incident(text_input):
     }
     
     # Formatea la salida como un JSON enriquecido
+    summary_text_output = summary[0]['summary_text']
+    
     json_output = format_as_json(
-        summary[0]['summary_text'], 
+        summary_text_output, 
         text_input, 
         incident_type,
         model_metadata
     )
     
-    # 3. Formato para la Interfaz de Gradio (Encabezado y JSON)
-    
-    # Se simula una confianza alta ya que el modelo BART-CNN no devuelve una métrica de confianza directa (score).
-    # Puedes implementar un clasificador separado si necesitas una confianza real.
-    confidence_estimate = "Alta (Modelo especializado en español)" 
+    # 4. Formato para la Interfaz de Gradio (Encabezado y JSON)
+    # Se añade la información del encabezado solicitada.
+    confidence_estimate = "Media/Alta (Modelo estable en inglés con instrucción en español)" 
     
     header = (
         f"--- Datos del Modelo y Resumen ---\n"
         f"Modelo: {MODEL_NAME}\n"
         f"Confianza Estimada: {confidence_estimate}\n"
-        f"Palabras (Min/Max): {MIN_LENGTH}/{MAX_LENGTH}\n"
+        f"Palabras (Min/Max Recomendadas): {MIN_LENGTH}/{MAX_LENGTH}\n"
         f"----------------------------------\n"
     )
     
@@ -116,7 +112,7 @@ def summarize_incident(text_input):
 # Crea y lanza la interfaz de Gradio
 iface = gr.Interface(
     fn=summarize_incident, 
-    # Ventanas más grandes (autoajustables)
+    # Ventanas más grandes (autoajustables) usando valores de config.py
     inputs=gr.Textbox(lines=INPUT_LINES, label=f"Texto del incidente (mínimo {MIN_LENGTH} palabras)"), 
     outputs=gr.Textbox(lines=OUTPUT_LINES, label="Resumen del incidente (JSON)"),
     title="Microagente de Resumen de Incidentes de TI",

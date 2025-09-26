@@ -9,24 +9,23 @@ def extract_entities(text):
     """
     entities = {}
 
-    # Expresión regular para encontrar recursos
+    # Expresión regular para encontrar recursos (usa patrón de config)
     server_matches = re.findall(REGEX_PATTERNS['resources'], text, re.IGNORECASE)
-    # Se aplana la lista de tuplas si hay grupos de captura
     servers = list(set([match[0] if isinstance(match, tuple) else match for match in server_matches]))
     if servers:
         entities['resources'] = servers 
 
-    # Expresión regular para encontrar IPs
+    # Expresión regular para encontrar IPs (usa patrón de config)
     ip_matches = re.findall(REGEX_PATTERNS['ips'], text)
     if ip_matches:
         entities['ips'] = list(set(ip_matches))
 
-    # Expresión regular para encontrar IDs de incidentes
+    # Expresión regular para encontrar IDs de incidentes (usa patrón de config)
     id_matches = re.findall(REGEX_PATTERNS['incident_id'], text, re.IGNORECASE)
     if id_matches:
         entities['incident_id'] = list(set(id_matches))
 
-    # Expresión regular para encontrar horarios
+    # Expresión regular para encontrar horarios (usa patrón de config)
     time_matches = re.findall(REGEX_PATTERNS['times'], text, re.IGNORECASE)
     if time_matches:
         entities['times'] = list(set(time_matches))
@@ -71,9 +70,5 @@ def format_as_json(summary_text, original_text, incident_type="N/A", model_metad
         "entities": extracted_entities,
         "metadata": metadata
     }
-
-    # Se mantiene el 'original_text' fuera de la salida final si no se requiere, 
-    # pero se incluye para trazabilidad si es necesario.
-    # output['original_text'] = original_text 
 
     return json.dumps(output, indent=4, ensure_ascii=False)
