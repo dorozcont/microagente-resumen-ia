@@ -1,13 +1,12 @@
-# Dependencias principales con versiones compatibles
-transformers>=4.30.0,<5.0.0
-torch>=2.1.0,<2.2.0
-gradio>=3.50.0,<4.0.0
+# Versiones compatibles probadas
+torch==2.1.0
+transformers==4.30.0
+gradio==3.39.0
 
 # Dependencias necesarias
-accelerate>=0.20.0
-sentencepiece>=0.1.99
-protobuf>=3.20.0,<4.0.0
-
-# Utilidades
-numpy>=1.21.0
-regex>=2022.10.31
+accelerate==0.20.0
+sentencepiece==0.1.99
+protobuf==3.20.0
+numpy==1.24.0
+regex==2023.6.3
+requests==2.28.0
