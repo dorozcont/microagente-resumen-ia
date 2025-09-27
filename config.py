@@ -16,12 +16,10 @@ OUTPUT_LINES = 15       # Aumentar la ventana de salida
 
 # Patrones de Expresiones Regulares para Extracción de Entidades
 REGEX_PATTERNS = {
-    # Nombres de servidores/servicios/recursos (ej. "Postgres-DB-01", "srv-01")
-    'resources': r'(\b[A-Z0-9-]{3,}-\b[A-Z0-9-]{3,}|srv-[0-9a-zA-Z-]+|\b(switch|router|servidor|bd|database)-[0-9a-zA-Z-]{2,})',
-    # IPs (ej. 192.168.1.1)
+    # Nombres de servidores/servicios/recursos
+    'resources': r'(\b[A-Z0-9-]{3,}-\b[A-Z0-9-]{3,}|srv-[0-9a-zA-Z-]+|\b(switch|router|servidor|bd|database|hostname|os|apache)-[0-9a-zA-Z-]{2,})', # <-- ¡Ajuste para Hostname, OS y Apache!
+    # IPs
     'ips': r'(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})',
-    # IDs de incidentes (ej. "INC-7890", "#4321")
-    'incident_id': r'(INC-[0-9]{4}|#[0-9]{4})',
-    # Horarios (ej. "10:30 a.m.", "15:45")
-    'times': r'(\d{1,2}:\d{2}\s?(?:a\.m\.|p\.m\.)?)'
+    # IDs de incidentes
+    'incident_id': r'(INC-[0-9]{4}|#[0-9]{4})'
 }
