@@ -1,4 +1,4 @@
 transformers==4.30.0
 torch==2.1.0
 gradio==4.3.0  # Versión más reciente recomendada
-sentencepiece   # Necesario para el nuevo tokenizador de BART en español
+protobuf
