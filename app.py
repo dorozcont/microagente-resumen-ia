@@ -13,11 +13,11 @@ from config import (
 )
 
 # --- CONFIGURACIÓN DE MODELO E INICIO ---
+# Modelo estable: facebook/bart-large-cnn (Estabilidad garantizada)
 device = 0 if torch.cuda.is_available() else -1
 print(f"Usando dispositivo CUDA: {device if device != -1 else 'CPU'}")
 
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-# Modelo: facebook/bart-large-cnn
 summarizer = pipeline(
     "summarization", 
     model=MODEL_NAME, 
@@ -43,7 +43,7 @@ def generate_rich_summary_markdown(data):
     """
     Procesa el diccionario de salida y genera un resumen atractivo en Markdown.
     """
-    # Íconos para las categorías
+    # Íconos para las categorías (añade atractivo visual)
     icon_map = {
         "Software/Aplicación": "💻", "Redes/Conectividad": "🌐", 
         "Infraestructura/Sistemas": "💾", "Base de datos": "🗄️", 
@@ -74,22 +74,18 @@ def generate_rich_summary_markdown(data):
     """
     
     # --- 2. ENTIDADES CLAVE ---
-    
     entity_md = "## 🔗 Entidades Detectadas\n"
     
-    # Formato para Hostnames/Recursos
     resources = entities.get('resources', [])
     if resources:
         entity_md += "### 💾 Recursos/Hostnames\n"
         entity_md += "• " + " • ".join([f"`{r}`" for r in resources]) + "\n\n"
 
-    # Formato para IPs
     ips = entities.get('ips', [])
     if ips:
         entity_md += "### 🌐 Direcciones IP\n"
         entity_md += "• " + " • ".join([f"`{ip}`" for ip in ips]) + "\n\n"
 
-    # Formato para IDs de Incidente
     ids = entities.get('incident_id', [])
     if ids:
         entity_md += "### 🏷️ IDs de Incidente\n"
@@ -117,7 +113,8 @@ def summarize_incident_and_process(text_input):
     y el resumen enriquecido en Markdown.
     """
     if not text_input:
-        return "El texto de entrada está vacío.", "Por favor, ingrese el texto de un incidente."
+        # Devuelve dos outputs: uno para el JSON, otro para el Markdown
+        return json.dumps({"status": "error", "message": "El texto de entrada está vacío."}, indent=4), "## ❌ Error\nEl texto de entrada está vacío."
     
     if len(text_input.split()) < MIN_LENGTH:
         error_msg = f"El texto es demasiado corto para generar un resumen significativo. Por favor, ingrese al menos {MIN_LENGTH} palabras."
@@ -164,18 +161,18 @@ def summarize_incident_and_process(text_input):
         confidence=confidence_score_estimate
     )
     
-    # Genera la salida enriquecida a partir del JSON (requiere parsear el JSON)
+    # Genera la salida enriquecida a partir del JSON
     data_dict = json.loads(json_output)
     rich_markdown_output = generate_rich_summary_markdown(data_dict)
     
-    # Devuelve una tupla (JSON crudo, Markdown enriquecido) para actualizar ambos componentes
+    # Devuelve la tupla (JSON crudo, Markdown enriquecido)
     return json_output, rich_markdown_output
 
 
-# --- AJUSTE DE LA INTERFAZ GRADIO (Con pestañas y componentes visuales) ---
+# --- AJUSTE DE LA INTERFAZ GRADIO (Final) ---
 
-# Usamos un tema suave y una estructura de bloques
-with gr.Blocks(theme='soft', title="Microagente de Resumen de Incidentes de TI") as iface: 
+# Usamos la sintaxis de tema compatible y la estructura de bloques
+with gr.Blocks(theme='soft', title="Microagente de Resumen de Incidentes de TI") as iface:
     
     gr.Markdown("# 🤖 Microagente de Resumen de Incidentes de TI")
     gr.Markdown("Pegue el texto de un incidente de TI y obtenga un resumen conciso y enriquecido en español.")
@@ -193,7 +190,7 @@ with gr.Blocks(theme='soft', title="Microagente de Resumen de Incidentes de TI")
         """,
     )
     
-    # Área de entrada y botón en una sola fila
+    # Área de entrada
     with gr.Row():
         text_input = gr.Textbox(
             lines=INPUT_LINES, 
@@ -201,19 +198,10 @@ with gr.Blocks(theme='soft', title="Microagente de Resumen de Incidentes de TI")
             placeholder="Pegue aquí el historial de logs, chats y notas del incidente..."
         )
         
-    # Inicializa los estados (necesario para manejar múltiples outputs en pestañas)
-    json_output_state = gr.State()
-    rich_output_state = gr.State()
-
-    btn_generate = gr.Button("Generar Análisis y Resumen", variant="primary").click(
-        fn=summarize_incident_and_process, 
-        inputs=text_input, 
-        outputs=[json_output_state, rich_output_state]
-    )
-
-    # Contenedores para las salidas
+    
+    # Contenedores para las salidas (inicializados)
     with gr.Tabs():
-        with gr.TabItem("✅ Resumen Enriquecido (Recomendado)", open=True):
+        with gr.TabItem("✅ Resumen Enriquecido (Recomendado)", open=True): # open=True ya debería funcionar con Gradio >= 4.44.1
             rich_output_markdown = gr.Markdown("El resumen enriquecido aparecerá aquí después del procesamiento.", elem_id="rich_output")
             
         with gr.TabItem("⚙️ Salida JSON Cruda"):
@@ -223,8 +211,13 @@ with gr.Blocks(theme='soft', title="Microagente de Resumen de Incidentes de TI")
                 elem_id="json_output"
             )
 
-    # El botón ahora actualiza los componentes correctos después de la definición de las pestañas
-    btn_generate.update(outputs=[json_output_textbox, rich_output_markdown])
+    # Botón y conexión de la lógica a los componentes de salida
+    gr.Button("Generar Análisis y Resumen", variant="primary").click(
+        fn=summarize_incident_and_process, 
+        inputs=text_input, 
+        # Conectamos directamente la tupla de salida (JSON, Markdown) a los componentes
+        outputs=[json_output_textbox, rich_output_markdown] 
+    )
 
     
 iface.launch(
