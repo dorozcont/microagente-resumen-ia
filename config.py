@@ -1,7 +1,7 @@
 # config.py
 
 # Parámetros del Modelo
-MODEL_NAME = "facebook/mbart-large-50-many-to-many-mmt" 
+MODEL_NAME = "facebook/bart-large-cnn" 
 MAX_INPUT_LENGTH = 1024 # Máxima longitud de tokens (robusta para BART-large)
 MIN_LENGTH = 50         # Longitud mínima de palabras para el resumen
 MAX_LENGTH = 150        # Longitud máxima de palabras para el resumen
@@ -16,12 +16,13 @@ OUTPUT_LINES = 15       # Aumentar la ventana de salida
 
 # --- CLASIFICACIÓN DE INCIDENTES (Evita el hardcodeo en app.py) ---
 INCIDENT_CLASSIFICATIONS = {
-    "Redes/Conectividad": ["red", "router", "switch", "vpn", "firewall", "conectividad", "corte"],
-    "Infraestructura/Sistemas": ["servidor", "cpu", "memoria", "disco", "os", "centos", "linux", "hardware", "vm", "host"],
-    "Base de datos": ["base de datos", "sql", "postgres", "mongo", "replication", "query", "bloqueo", "lento"],
-    "Seguridad": ["seguridad", "acceso", "vulnerabilidad", "phishing", "ransomware", "autenticacion", "filtracion"],
-    "Software/Aplicación": ["aplicación", "software", "bug", "código", "deploy", "apache", "nginx", "java", "script", "micros", "api"],
-    "Continuidad de Negocio": ["backup", "respaldo", "dr", "disaster", "replicacion", "recuperacion"],
+    # Priorizamos estas palabras clave para capturar el ejemplo de error de reporte
+    "Software/Aplicación": ["aplicación", "software", "bug", "código", "deploy", "apache", "nginx", "java", "script", "micros", "api", "servicio", "módulo", "despliegue", "sintaxis", "rollback", "patch", "reporte", "función", "interfaz de usuario", "devuelve un error"], 
+    "Redes/Conectividad": ["red", "router", "switch", "vpn", "firewall", "conectividad", "corte", "enlace"],
+    "Infraestructura/Sistemas": ["servidor", "cpu", "memoria", "disco", "os", "centos", "linux", "hardware", "vm", "host", "datacenter", "virtual"],
+    "Base de datos": ["base de datos", "sql", "postgres", "mongo", "replication", "query", "bloqueo", "lento", "oracle"],
+    "Seguridad": ["seguridad", "acceso", "vulnerabilidad", "phishing", "ransomware", "autenticacion", "filtracion", "malware"],
+    "Continuidad de Negocio": ["backup", "respaldo", "dr", "disaster", "replicacion", "recuperacion", "copia"],
 }
 
 # Patrones de Expresiones Regulares para Extracción de Entidades
