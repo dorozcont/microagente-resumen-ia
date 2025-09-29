@@ -7,7 +7,7 @@ git fetch origin --tags
 # 1) Detectar cambios
 CHANGED=$(git status --short | awk '{print $2}')
 if [ -z "$CHANGED" ]; then
-  echo "⚠️ No hay cambios detectados."
+  echo "⚠️ No hay cambios detectados para el commit."
   exit 1
 fi
 
@@ -15,15 +15,50 @@ fi
 read -rp "📝 Escribe el mensaje de commit: " COMMIT_MSG
 
 # 3) Tomar la ÚLTIMA versión estable desde la rama de desarrollo.
-BASE_TAG=$(git describe --tags --abbrev=0 origin/dev 2>/dev/null || echo "v1.1.0")
+#    Usamos 'origin/dev' para obtener el tag más reciente de esa rama remota.
+BASE_TAG=$(git describe --tags --abbrev=0 origin/dev 2>/dev/null || echo "v1.0.0")
 BASE_NUM=${BASE_TAG#v}
 IFS='.' read -r MAJOR MINOR PATCH <<<"$BASE_NUM"
 
-# 4) Nuevo tag en dev = mismo MAJOR.MINOR, PATCH+1
-NEW_PATCH=$((PATCH + 1))
-NEW_TAG="v${MAJOR}.${MINOR}.${NEW_PATCH}"
+# 4) Preguntar por el tipo de incremento
+echo ""
+echo "Tipo de incremento actual (base: $BASE_TAG):"
+echo "  1) Patch (vX.Y.Z+1) - Correcciones de errores pequeñas"
+echo "  2) Minor (vX.Y+1.0) - Nuevas funcionalidades compatibles con versiones anteriores"
+echo "  3) Major (vX+1.0.0) - Cambios incompatibles con versiones anteriores (breaking changes)"
+echo ""
+read -rp "❓ Selecciona el tipo de incremento (1, 2, o 3): " INCREMENT_TYPE
 
-# 5) Resumen
+# 5) Calcular el nuevo tag
+NEW_MAJOR=$MAJOR
+NEW_MINOR=$MINOR
+NEW_PATCH=$PATCH
+
+case "$INCREMENT_TYPE" in
+    1)
+        # Patch: incrementa PATCH, mantiene MAJOR y MINOR
+        NEW_PATCH=$((PATCH + 1))
+        ;;
+    2)
+        # Minor: incrementa MINOR, resetea PATCH a 0
+        NEW_MINOR=$((MINOR + 1))
+        NEW_PATCH=0
+        ;;
+    3)
+        # Major: incrementa MAJOR, resetea MINOR y PATCH a 0
+        NEW_MAJOR=$((MAJOR + 1))
+        NEW_MINOR=0
+        NEW_PATCH=0
+        ;;
+    *)
+        echo "❌ Tipo de incremento no válido. Operación cancelada."
+        exit 1
+        ;;
+esac
+
+NEW_TAG="v${NEW_MAJOR}.${NEW_MINOR}.${NEW_PATCH}"
+
+# 6) Resumen
 echo ""
 echo "🚀 Preparando release..."
 echo "   Archivos a commitear:"
@@ -36,7 +71,7 @@ echo ""
 read -rp "❓ ¿Proceder con estos cambios? (y/n): " CONFIRM
 [ "$CONFIRM" = "y" ] || { echo "❌ Operación cancelada."; exit 1; }
 
-# 6) Ejecutar pipeline
+# 7) Ejecutar pipeline
 git add .
 git commit -m "$COMMIT_MSG" || echo "⚠️ No hay cambios que commitear"
 git push origin dev
