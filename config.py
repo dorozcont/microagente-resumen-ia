@@ -4,7 +4,7 @@
 MODEL_NAME = "facebook/bart-large-cnn" 
 MAX_INPUT_LENGTH = 1024 # Máxima longitud de tokens (robusta para BART-large)
 MIN_LENGTH = 50         # Longitud mínima de palabras para el resumen
-MAX_LENGTH = 150        # Longitud máxima de palabras para el resumen
+MAX_LENGTH = 250        # Longitud máxima de palabras para el resumen
 NUM_BEAMS = 4           # Estrategia de búsqueda para mejor calidad
 DO_SAMPLE = False       # Desactiva la aleatoriedad
 
