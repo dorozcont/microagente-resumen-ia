@@ -5,49 +5,41 @@ from config import REGEX_PATTERNS
 
 def extract_entities(text):
     """
-    Extrae entidades clave: recursos (servidores, Hostname, OS) e IPs.
+    Extrae entidades clave: recursos, IPs e IDs, utilizando patrones flexibles.
     """
     entities = {}
     
-    # 1. Extracción de Recursos (Hostnames, Servidores, OS)
-    # Patrón mejorado para capturar nombres después de etiquetas comunes (Hostname: X, OS: Y)
-    # y para la detección general de recursos.
-    # Usamos re.findall para buscar la expresión en el texto.
+    # 1. Extracción de Key-Value (Hostname, IP, OS, etc.)
+    # Patrón: (Key: Value) - Captura claves comunes seguidas de dos puntos y el valor.
+    # Mejora la detección de 'Hostname: X' y 'IP: Y' de forma genérica.
+    kv_matches = re.findall(r'(\b(?:Hostname|Host|Server|OS|IP|Usuario|APP|DB)\s*:\s*([a-zA-Z0-9.\-/]{3,}))', text, re.IGNORECASE)
     
-    # Intenta capturar Hostname/OS/Apache de forma explícita
-    explicit_matches = re.findall(r'(Hostname:\s*([a-zA-Z0-9-]+)|OS:\s*([a-zA-Z0-9\s-]+)|(\bntapachedemo\b|\bCentOS\s+9\b))', text, re.IGNORECASE)
+    # 2. Extracción de IPs
+    ip_matches = re.findall(REGEX_PATTERNS['ips'], text) # Usa el patrón simple y robusto de config.py
     
-    # Intenta capturar recursos generales basados en el REGEX_PATTERNS['resources']
-    general_resource_matches = re.findall(REGEX_PATTERNS['resources'], text, re.IGNORECASE)
+    # Consolidación de recursos (hostnames, OS, etc.)
+    resources = set()
+    ips_set = set(ip_matches)
 
-    # Aplanar y consolidar resultados
-    all_resources = set()
-    
-    # Consolidar coincidencias explícitas (captura de grupos 2, 3 o 4)
-    for match in explicit_matches:
-        if match[1]: all_resources.add(match[1].strip()) # Hostname
-        if match[2]: all_resources.add(match[2].strip()) # OS
-        if match[3]: all_resources.add(match[3].strip()) # Valores directos
+    for match in kv_matches:
+        key = match[0].split(':')[0].strip()
+        value = match[1].strip()
         
-    # Consolidar coincidencias generales (aplanando las tuplas del regex de config.py)
-    for match in general_resource_matches:
-        resource_name = match[0] if isinstance(match, tuple) else match
-        # Evitar agregar cadenas vacías o cortas
-        if resource_name and len(resource_name.strip()) > 2:
-            all_resources.add(resource_name.strip())
-
-    if all_resources:
-        entities['resources'] = list(all_resources) 
-
-    # 2. Expresión regular para encontrar IPs (usa patrón de config)
-    ip_matches = re.findall(REGEX_PATTERNS['ips'], text)
-    if ip_matches:
-        entities['ips'] = list(set(ip_matches))
-
-    # 3. Expresión regular para encontrar IDs de incidentes (usa patrón de config)
+        if key.upper() == 'IP':
+            ips_set.add(value)
+        elif key.upper() in ['HOSTNAME', 'HOST', 'SERVER', 'OS', 'APP', 'DB']:
+            resources.add(value)
+        else:
+             # Incluir el valor como recurso si no es IP
+             resources.add(value)
+             
+    # 3. Extracción de IDs de incidentes (usa patrón de config)
     id_matches = re.findall(REGEX_PATTERNS['incident_id'], text, re.IGNORECASE)
-    if id_matches:
-        entities['incident_id'] = list(set(id_matches))
+
+    # Llenar el diccionario de salida
+    if resources: entities['resources'] = list(resources) 
+    if ips_set: entities['ips'] = list(ips_set)
+    if id_matches: entities['incident_id'] = list(set(id_matches))
 
     # Conteo de entidades
     entity_counts = {k: len(v) for k, v in entities.items()}

@@ -1,7 +1,7 @@
 # config.py
 
 # Parámetros del Modelo
-MODEL_NAME = "facebook/bart-large-cnn" 
+MODEL_NAME = "facebook/mbart-large-50-many-to-many-mmt" 
 MAX_INPUT_LENGTH = 1024 # Máxima longitud de tokens (robusta para BART-large)
 MIN_LENGTH = 50         # Longitud mínima de palabras para el resumen
 MAX_LENGTH = 150        # Longitud máxima de palabras para el resumen
@@ -14,12 +14,12 @@ SERVER_PORT = 7860
 INPUT_LINES = 15        # Aumentar la ventana de entrada
 OUTPUT_LINES = 15       # Aumentar la ventana de salida
 
-# Patrones de Expresiones Regulares para Extracción de Entidades
-REGEX_PATTERNS = {
-    # Nombres de servidores/servicios/recursos
-    'resources': r'(\b[A-Z0-9-]{3,}-\b[A-Z0-9-]{3,}|srv-[0-9a-zA-Z-]+|\b(switch|router|servidor|bd|database|hostname|os|apache)-[0-9a-zA-Z-]{2,})', # <-- ¡Ajuste para Hostname, OS y Apache!
-    # IPs
-    'ips': r'(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})',
-    # IDs de incidentes
-    'incident_id': r'(INC-[0-9]{4}|#[0-9]{4})'
+# --- CLASIFICACIÓN DE INCIDENTES (Evita el hardcodeo en app.py) ---
+INCIDENT_CLASSIFICATIONS = {
+    "Redes/Conectividad": ["red", "router", "switch", "vpn", "firewall", "conectividad", "corte"],
+    "Infraestructura/Sistemas": ["servidor", "cpu", "memoria", "disco", "os", "centos", "linux", "hardware", "vm", "host"],
+    "Base de datos": ["base de datos", "sql", "postgres", "mongo", "replication", "query", "bloqueo", "lento"],
+    "Seguridad": ["seguridad", "acceso", "vulnerabilidad", "phishing", "ransomware", "autenticacion", "filtracion"],
+    "Software/Aplicación": ["aplicación", "software", "bug", "código", "deploy", "apache", "nginx", "java", "script", "micros", "api"],
+    "Continuidad de Negocio": ["backup", "respaldo", "dr", "disaster", "replicacion", "recuperacion"],
 }

@@ -14,35 +14,31 @@ from config import (
 device = 0 if torch.cuda.is_available() else -1
 print(f"Usando dispositivo CUDA: {device if device != -1 else 'CPU'}")
 
+# Token ID para español (es_XX) en M-BART. Esto es crucial.
+SPANISH_TOKEN_ID = tokenizer.lang_code_to_id["es_XX"] 
+
 # Carga el tokenizador y el modelo de resumen.
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 summarizer = pipeline(
     "summarization", 
     model=MODEL_NAME, 
     tokenizer=tokenizer,
-    device=device, # <-- Usa la GPU si está disponible
-    return_text=False # Optimizado para usar el score
+    device=device,
+    # El pipeline de M-BART requiere el idioma de entrada para inicializar la generación
+    src_lang="es_XX" 
 )
 
 def classify_incident_type(text):
     """
-    Clasifica el tipo de incidente basándose en palabras clave en el texto, con más categorías.
+    Clasifica el tipo de incidente usando el diccionario de configuracion (sin hardcodeo if/elif)
     """
     text_lower = text.lower()
     
-    if "red" in text_lower or "router" in text_lower or "switch" in text_lower or "vpn" in text_lower or "firewall" in text_lower:
-        return "Redes/Conectividad"
-    if "servidor" in text_lower or "cpu" in text_lower or "memoria" in text_lower or "disco" in text_lower or "os" in text_lower or "centos" in text_lower or "linux" in text_lower:
-        return "Infraestructura/Sistemas"
-    if "base de datos" in text_lower or "sql" in text_lower or "postgres" in text_lower or "mongo" in text_lower or "replication" in text_lower:
-        return "Base de datos"
-    if "seguridad" in text_lower or "acceso" in text_lower or "vulnerabilidad" in text_lower or "phishing" in text_lower or "ransomware" in text_lower:
-        return "Seguridad"
-    if "aplicación" in text_lower or "software" in text_lower or "bug" in text_lower or "código" in text_lower or "deploy" in text_lower or "apache" in text_lower or "nginx" in text_lower:
-        return "Software/Aplicación"
-    if "backup" in text_lower or "respaldo" in text_lower or "dr" in text_lower or "disaster" in text_lower:
-        return "Continuidad de Negocio"
-        
+    # Itera sobre las categorías definidas en config.py
+    for category, keywords in INCIDENT_CLASSIFICATIONS.items():
+        if any(keyword in text_lower for keyword in keywords):
+            return category
+            
     return "General/Otros"
 
 def summarize_incident(text_input):
