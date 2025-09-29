@@ -151,7 +151,7 @@ def summarize_incident_and_process(text_input):
     # 2. POST-PROCESAMIENTO DE TRADUCCIÓN (Para forzar el español puro)
     # Asume que la mayoría del texto es español con frases en inglés incrustadas
     # Se utiliza el modelo de EN->ES para limpiar frases en inglés como "The incident occurred..."
-    translation_result = translator(bilingual_summary, max_length=150)
+    translation_result = translator(bilingual_summary, max_length=260)
     summary_text_output = translation_result[0]['translation_text']
 
     incident_type = classify_incident_type(text_input)
