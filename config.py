@@ -8,6 +8,9 @@ MAX_LENGTH = 150        # Longitud máxima de palabras para el resumen
 NUM_BEAMS = 4           # Estrategia de búsqueda para mejor calidad
 DO_SAMPLE = False       # Desactiva la aleatoriedad
 
+# NUEVO: Modelo de post-procesamiento para forzar el español
+TRANSLATION_MODEL_NAME = "Helsinki-NLP/opus-mt-en-es"
+
 # Parámetros de la Interfaz Gradio
 SERVER_NAME = "0.0.0.0"
 SERVER_PORT = 7860
