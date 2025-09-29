@@ -201,7 +201,7 @@ with gr.Blocks(theme='soft', title="Microagente de Resumen de Incidentes de TI")
     
     # Contenedores para las salidas (inicializados)
     with gr.Tabs():
-        with gr.TabItem("✅ Resumen Enriquecido (Recomendado)", open=True): # open=True ya debería funcionar con Gradio >= 4.44.1
+        with gr.TabItem("✅ Resumen Enriquecido (Recomendado)"):
             rich_output_markdown = gr.Markdown("El resumen enriquecido aparecerá aquí después del procesamiento.", elem_id="rich_output")
             
         with gr.TabItem("⚙️ Salida JSON Cruda"):
