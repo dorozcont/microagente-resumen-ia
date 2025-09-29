@@ -23,3 +23,10 @@ INCIDENT_CLASSIFICATIONS = {
     "Software/Aplicación": ["aplicación", "software", "bug", "código", "deploy", "apache", "nginx", "java", "script", "micros", "api"],
     "Continuidad de Negocio": ["backup", "respaldo", "dr", "disaster", "replicacion", "recuperacion"],
 }
+
+# Patrones de Expresiones Regulares para Extracción de Entidades
+REGEX_PATTERNS = {
+    # Solo se dejan IPs e IDs, la extracción de 'resources' usa lógica Key-Value en utils.py
+    'ips': r'(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})',
+    'incident_id': r'(INC-[0-9]{4}|#[0-9]{4}|TICKET-[0-9]{4})'
+}

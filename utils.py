@@ -9,18 +9,15 @@ def extract_entities(text):
     """
     entities = {}
     
-    # 1. Extracción de Key-Value (Hostname, IP, OS, etc.)
-    # Patrón: (Key: Value) - Captura claves comunes seguidas de dos puntos y el valor.
-    # Mejora la detección de 'Hostname: X' y 'IP: Y' de forma genérica.
-    kv_matches = re.findall(r'(\b(?:Hostname|Host|Server|OS|IP|Usuario|APP|DB)\s*:\s*([a-zA-Z0-9.\-/]{3,}))', text, re.IGNORECASE)
+ # 1. Extracción de Key-Value (Hostname, IP, OS, etc.) - Detecta 'Key: Value'
+    # Patrón: (Key: Value) - Captura claves comunes seguidas de dos puntos y el valor (más robusto).
+    kv_matches = re.findall(r'(\b(?:Hostname|Host|Server|OS|IP|Usuario|APP|DB|ID|Ticket)\s*:\s*([a-zA-Z0-9.\-/]{2,}))', text, re.IGNORECASE)
     
-    # 2. Extracción de IPs
-    ip_matches = re.findall(REGEX_PATTERNS['ips'], text) # Usa el patrón simple y robusto de config.py
-    
-    # Consolidación de recursos (hostnames, OS, etc.)
     resources = set()
-    ips_set = set(ip_matches)
+    ips_set = set()
+    incident_ids_set = set()
 
+    # Procesa coincidencias Key-Value
     for match in kv_matches:
         key = match[0].split(':')[0].strip()
         value = match[1].strip()
@@ -29,17 +26,23 @@ def extract_entities(text):
             ips_set.add(value)
         elif key.upper() in ['HOSTNAME', 'HOST', 'SERVER', 'OS', 'APP', 'DB']:
             resources.add(value)
+        elif key.upper() in ['ID', 'TICKET']:
+             incident_ids_set.add(value)
         else:
-             # Incluir el valor como recurso si no es IP
              resources.add(value)
-             
-    # 3. Extracción de IDs de incidentes (usa patrón de config)
+
+    # 2. Extracción de IPs
+    ip_matches = re.findall(REGEX_PATTERNS['ips'], text) # Usa el patrón simple y robusto de config.py
+    ips_set.update(ip_matches)
+
+    # 3. Extracción de IDs de incidentes (usando el patrón de config.py)
     id_matches = re.findall(REGEX_PATTERNS['incident_id'], text, re.IGNORECASE)
+    incident_ids_set.update(id_matches)
 
     # Llenar el diccionario de salida
     if resources: entities['resources'] = list(resources) 
     if ips_set: entities['ips'] = list(ips_set)
-    if id_matches: entities['incident_id'] = list(set(id_matches))
+    if incident_ids_set: entities['incident_id'] = list(incident_ids_set)
 
     # Conteo de entidades
     entity_counts = {k: len(v) for k, v in entities.items()}
