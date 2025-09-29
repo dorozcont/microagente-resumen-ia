@@ -9,7 +9,8 @@ from config import (
     MODEL_NAME, MIN_LENGTH, MAX_LENGTH, 
     NUM_BEAMS, DO_SAMPLE, MAX_INPUT_LENGTH,
     SERVER_NAME, SERVER_PORT, INPUT_LINES, OUTPUT_LINES,
-    INCIDENT_CLASSIFICATIONS 
+    INCIDENT_CLASSIFICATIONS, # Importamos TRANSLATION_MODEL_NAME
+    TRANSLATION_MODEL_NAME
 )
 
 # --- CONFIGURACIÓN DE MODELO E INICIO ---
@@ -24,6 +25,14 @@ summarizer = pipeline(
     tokenizer=tokenizer,
     device=device,
     return_text=False 
+)
+
+# Carga del modelo de TRADUCCIÓN (Helsinki-NLP/opus-mt-en-es)
+# Se crea un nuevo pipeline para la traducción
+translator = pipeline(
+    "translation",
+    model=TRANSLATION_MODEL_NAME,
+    device=device
 )
 # ----------------------------------------
 
@@ -120,17 +129,12 @@ def summarize_incident_and_process(text_input):
         error_msg = f"El texto es demasiado corto para generar un resumen significativo. Por favor, ingrese al menos {MIN_LENGTH} palabras."
         return json.dumps({"status": "error", "message": error_msg}, indent=4), f"## ❌ Error\n{error_msg}"
 
-    # TRUCO DE INSTRUCCIÓN EN ESPAÑOL (PROMPT)
+    # TRUCO DE INSTRUCCIÓN EN ESPAÑOL (Mantenido para guiar el resumen de BART-CNN)
     spanish_prompt_prefix = "Resuma este texto del incidente de TI de forma concisa, profesional y **exclusivamente en español**: "
     input_with_prompt = spanish_prompt_prefix + text_input
     
-    # Manejo de texto largo
-    tokenized_input = tokenizer(
-        input_with_prompt, 
-        max_length=MAX_INPUT_LENGTH, 
-        truncation=True, 
-        return_tensors="pt"
-    )
+    # 1. Generación de Resumen (Puede ser bilingüe)
+    tokenized_input = tokenizer(input_with_prompt, max_length=MAX_INPUT_LENGTH, truncation=True, return_tensors="pt")
     safe_text_input = tokenizer.decode(tokenized_input.input_ids[0], skip_special_tokens=True)
     
     summary_params = {
@@ -143,11 +147,19 @@ def summarize_incident_and_process(text_input):
     confidence_score_estimate = 90.0 
     
     summary_result = summarizer(safe_text_input, **summary_params)
-    summary_text_output = summary_result[0]['summary_text']
+    bilingual_summary = summary_result[0]['summary_text']
+    
+    # 2. POST-PROCESAMIENTO DE TRADUCCIÓN (Para forzar el español puro)
+    # Asume que la mayoría del texto es español con frases en inglés incrustadas
+    # Se utiliza el modelo de EN->ES para limpiar frases en inglés como "The incident occurred..."
+    translation_result = translator(bilingual_summary, max_length=150)
+    summary_text_output = translation_result[0]['translation_text']
+
     incident_type = classify_incident_type(text_input)
     
     model_metadata = {
         'model_name': MODEL_NAME,
+        'translation_model': TRANSLATION_MODEL_NAME,
         'min_length': MIN_LENGTH,
         'max_length': MAX_LENGTH
     }
@@ -183,9 +195,9 @@ with gr.Blocks(theme='soft', title="Microagente de Resumen de Incidentes de TI")
         <div style='background-color: #F3F4F6; padding: 10px; border-radius: 5px;'>
             | Parámetro | Valor |
             | :--- | :--- |
-            | **Modelo** | `{MODEL_NAME}` |
+            | **Modelo de Resumen** | `{MODEL_NAME}` |
+            | **Modelo de Traducción** | `{TRANSLATION_MODEL_NAME}` |
             | **Dispositivo** | `{'GPU (CUDA)' if device != -1 else 'CPU'}` |
-            | **Confianza Est.** | `90%` |
         </div>
         """,
     )
