@@ -175,12 +175,12 @@ def summarize_incident_and_process(text_input):
 # --- AJUSTE DE LA INTERFAZ GRADIO (Con pestañas y componentes visuales) ---
 
 # Usamos un tema suave y una estructura de bloques
-with gr.Blocks(theme=gr.Theme.Soft(), title="Microagente de Resumen de Incidentes de TI") as iface:
+with gr.Blocks(theme='soft', title="Microagente de Resumen de Incidentes de TI") as iface: 
     
     gr.Markdown("# 🤖 Microagente de Resumen de Incidentes de TI")
     gr.Markdown("Pegue el texto de un incidente de TI y obtenga un resumen conciso y enriquecido en español.")
     
-    # Metadata del Modelo (ahora más visual)
+    # Metadata del Modelo
     metadata_markdown = gr.Markdown(
         f"""
         <div style='background-color: #F3F4F6; padding: 10px; border-radius: 5px;'>
@@ -201,34 +201,31 @@ with gr.Blocks(theme=gr.Theme.Soft(), title="Microagente de Resumen de Incidente
             placeholder="Pegue aquí el historial de logs, chats y notas del incidente..."
         )
         
-    gr.Button("Generar Análisis y Resumen", variant="primary").click(
-        fn=summarize_incident_and_process, 
-        inputs=text_input, 
-        outputs=[gr.State(), gr.State()], # Se usará gr.State() temporalmente
-        # Los outputs se definen en el click y se inicializan al final
-    )
-
-    # Contenedores para las salidas
-    # Se inicializan como gr.State para poder referenciarlos en el click, y luego se asignan a los outputs reales.
+    # Inicializa los estados (necesario para manejar múltiples outputs en pestañas)
     json_output_state = gr.State()
     rich_output_state = gr.State()
 
+    btn_generate = gr.Button("Generar Análisis y Resumen", variant="primary").click(
+        fn=summarize_incident_and_process, 
+        inputs=text_input, 
+        outputs=[json_output_state, rich_output_state]
+    )
+
+    # Contenedores para las salidas
     with gr.Tabs():
         with gr.TabItem("✅ Resumen Enriquecido (Recomendado)", open=True):
-            # Aquí se muestra el resumen interpretado y atractivo
             rich_output_markdown = gr.Markdown("El resumen enriquecido aparecerá aquí después del procesamiento.", elem_id="rich_output")
             
         with gr.TabItem("⚙️ Salida JSON Cruda"):
-            # Aquí se muestra el JSON crudo para integración o debug
             json_output_textbox = gr.Textbox(
                 lines=OUTPUT_LINES, 
                 label="JSON Crudo (Salida del API)", 
                 elem_id="json_output"
             )
 
-    # Re-asignación del evento click para actualizar los componentes reales
-    # Este es un truco común en Gradio para manejar múltiples salidas a múltiples componentes en diferentes ubicaciones.
-    iface.dependencies[2]['outputs'] = [json_output_textbox, rich_output_markdown]
+    # El botón ahora actualiza los componentes correctos después de la definición de las pestañas
+    btn_generate.update(outputs=[json_output_textbox, rich_output_markdown])
+
     
 iface.launch(
     server_name=SERVER_NAME,
