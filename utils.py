@@ -67,7 +67,6 @@ def format_as_json(summary_text, original_text, incident_type="N/A", model_metad
     # Métricas de conteo
     original_words_count = len(original_text.split())
     summary_words_count = len(summary_text.split())
-    metadata['entity_counts'] = entity_counts
     
     # Porcentaje de disminución
     reduction_percentage = round((1 - (summary_words_count / original_words_count)) * 100, 2) if original_words_count > 0 else 0
