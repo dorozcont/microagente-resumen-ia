@@ -1,6 +1,7 @@
-# app.py
+# app.py - Versión Futurista (Compatible con Gradio 4.44.1)
 
 import json
+import time
 from transformers import pipeline, AutoTokenizer
 import gradio as gr
 import torch
@@ -9,28 +10,568 @@ from config import (
     MODEL_NAME, MIN_LENGTH, MAX_LENGTH, 
     NUM_BEAMS, DO_SAMPLE, MAX_INPUT_LENGTH,
     SERVER_NAME, SERVER_PORT, INPUT_LINES, OUTPUT_LINES,
-    INCIDENT_CLASSIFICATIONS, TRANSLATION_MODEL_NAME # <--- ¡Importación completa!
+    INCIDENT_CLASSIFICATIONS, TRANSLATION_MODEL_NAME
 )
 
-CUSTOM_COLOR = "#C9F70E" # Verde Limón
+CUSTOM_COLOR = "#C9F70E"  # Verde Limón
 
-# Definición del tema personalizado
-CUSTOM_THEME = gr.themes.Soft().set(
-    # FONDOS
-    background_fill_primary="#FFFFFF",
-    background_fill_secondary="#F5F5F5",
-
-    # BOTONES PRIMARIOS (Solución forzada para texto negro y el color deseado)
+# Tema compatible con Gradio 4.44.1
+CUSTOM_THEME = gr.themes.Default(
+    primary_hue="green",
+    neutral_hue="slate"
+).set(
+    # FONDOS OSCUROS
+    background_fill_primary="#000000",
+    background_fill_secondary="#0A0A0A",
+    block_background_fill="#111111",
+    block_label_background_fill="#1A1A1A",
+    block_border_color="#333333",
+    
+    # COLORES DE ÉNFASIS
+    color_accent_soft=CUSTOM_COLOR + "20",
+    color_accent_fg=CUSTOM_COLOR,
+    
+    # BOTONES PRIMARIOS
     button_primary_background_fill=CUSTOM_COLOR,
+    button_primary_background_fill_hover=CUSTOM_COLOR + "CC",
     button_primary_border_color=CUSTOM_COLOR,
-    button_primary_text_color="#000000", # <--- ¡Texto negro forzado!
+    button_primary_text_color="#000000",
+    button_primary_border_color_hover=CUSTOM_COLOR,
+    
+    # TEXTOS
+    body_text_color="#FFFFFF",
+    block_label_text_color=CUSTOM_COLOR,
+    block_title_text_color="#FFFFFF",
 )
 
-# --- CONFIGURACIÓN DE MODELO E INICIO ---
+def create_animated_header():
+    """Crea un header animado con efecto de partículas digitales"""
+    return """
+    <div class="header-container">
+        <div class="digital-particles"></div>
+        <div class="header-content">
+            <h1 class="main-title">🤖 MICROAGENTE DE ANÁLISIS DE INCIDENTES</h1>
+            <div class="subtitle-container">
+                <div class="scanning-bar"></div>
+                <p class="subtitle">Sistema de Inteligencia Artificial para Análisis y Resumen de Incidentes de TI</p>
+            </div>
+        </div>
+        <div class="status-indicator">
+            <div class="pulse-dot"></div>
+            <span>SISTEMA ACTIVO</span>
+        </div>
+    </div>
+    """
+
+def create_cyber_card(content, title=None, icon=None, glow_color=CUSTOM_COLOR):
+    """Crea una tarjeta con estilo cyberpunk"""
+    icon_html = f"<span class='card-icon'>{icon}</span>" if icon else ""
+    title_html = f"<h3 class='card-title'>{title}</h3>" if title else ""
+    
+    return f"""
+    <div class="cyber-card" style='--glow-color: {glow_color}'>
+        <div class="card-header">
+            {icon_html}
+            {title_html}
+        </div>
+        <div class="card-content">
+            {content}
+        </div>
+        <div class="card-glow"></div>
+    </div>
+    """
+
+def generate_rich_summary_markdown(data):
+    """
+    Versión mejorada del resumen con elementos visuales futuristas
+    """
+    icon_map = {
+        "Software/Aplicación": "💻", "Redes/Conectividad": "🌐", 
+        "Infraestructura/Sistemas": "💾", "Base de datos": "🗄️", 
+        "Seguridad": "🔒", "General/Otros": "📜"
+    }
+    
+    summary = data.get('summary', 'Resumen no disponible.')
+    incident_type = data.get('incident_type', 'N/A')
+    entities = data.get('entities', {})
+    metrics = data.get('metadata', {})
+    
+    confidence = metrics.get('confidence_score', 'N/A')
+    original_words = metrics.get('original_words_count', 'N/A')
+    summary_words = metrics.get('summary_words_count', 'N/A')
+    reduction_percentage = metrics.get('reduction_percentage', 'N/A')
+    
+    # Header principal con animación
+    rich_md = create_cyber_card(
+        content=f"""
+        <div class="incident-header">
+            <div class="type-badge">
+                {icon_map.get(incident_type, '📜')} {incident_type}
+            </div>
+            <div class="confidence-meter">
+                <div class="meter-label">CONFIANZA DEL SISTEMA</div>
+                <div class="meter-bar">
+                    <div class="meter-fill" style="width: {confidence.replace('%', '') if '%' in str(confidence) else '90'}%"></div>
+                </div>
+                <div class="meter-value">{confidence}</div>
+            </div>
+        </div>
+        """,
+        title="ANÁLISIS EJECUTIVO",
+        icon="📊"
+    )
+    
+    # Resumen del incidente
+    rich_md += create_cyber_card(
+        content=f"""
+        <div class="summary-content">
+            <div class="summary-text">{summary}</div>
+        </div>
+        """,
+        title="RESUMEN DEL INCIDENTE",
+        icon="📝"
+    )
+    
+    # Entidades detectadas
+    entity_content = ""
+    resources = entities.get('resources', [])
+    ips = entities.get('ips', [])
+    ids = entities.get('incident_id', [])
+    
+    if resources or ips or ids:
+        if resources:
+            entity_content += f"""
+            <div class="entity-section">
+                <h4>💾 RECURSOS/HOSTNAMES</h4>
+                <div class="entity-tags">
+                    {''.join([f'<span class="entity-tag resource">{str(r)}</span>' for r in resources])}
+                </div>
+            </div>
+            """
+        
+        if ips:
+            entity_content += f"""
+            <div class="entity-section">
+                <h4>🌐 DIRECCIONES IP</h4>
+                <div class="entity-tags">
+                    {''.join([f'<span class="entity-tag ip">{str(ip)}</span>' for ip in ips])}
+                </div>
+            </div>
+            """
+        
+        if ids:
+            entity_content += f"""
+            <div class="entity-section">
+                <h4>🏷️ IDS DE INCIDENTE</h4>
+                <div class="entity-tags">
+                    {''.join([f'<span class="entity-tag id">{str(i)}</span>' for i in ids])}
+                </div>
+            </div>
+            """
+    else:
+        entity_content = "<div class='no-entities'>⚠️ No se detectaron entidades clave</div>"
+    
+    rich_md += create_cyber_card(
+        content=entity_content,
+        title="ENTIDADES DETECTADAS",
+        icon="🔗"
+    )
+    
+    # Métricas de procesamiento
+    metrics_content = f"""
+    <div class="metrics-grid">
+        <div class="metric-item">
+            <div class="metric-value">{original_words}</div>
+            <div class="metric-label">PALABRAS ORIGINALES</div>
+        </div>
+        <div class="metric-item">
+            <div class="metric-value">{summary_words}</div>
+            <div class="metric-label">PALABRAS RESUMEN</div>
+        </div>
+        <div class="metric-item highlight">
+            <div class="metric-value">{reduction_percentage}%</div>
+            <div class="metric-label">REDUCCIÓN</div>
+        </div>
+    </div>
+    """
+    
+    rich_md += create_cyber_card(
+        content=metrics_content,
+        title="MÉTRICAS DE PROCESAMIENTO",
+        icon="📈"
+    )
+    
+    return rich_md
+
+# CSS personalizado para efectos futuristas
+CUSTOM_CSS = f"""
+<style>
+    /* Animaciones y efectos globales */
+    @keyframes glow {{
+        0%, 100% {{ box-shadow: 0 0 5px {CUSTOM_COLOR}40; }}
+        50% {{ box-shadow: 0 0 20px {CUSTOM_COLOR}80, 0 0 30px {CUSTOM_COLOR}40; }}
+    }}
+    
+    @keyframes pulse {{
+        0%, 100% {{ opacity: 1; }}
+        50% {{ opacity: 0.7; }}
+    }}
+    
+    @keyframes scan {{
+        0% {{ transform: translateX(-100%); }}
+        100% {{ transform: translateX(400%); }}
+    }}
+    
+    @keyframes float {{
+        0%, 100% {{ transform: translateY(0px); }}
+        50% {{ transform: translateY(-5px); }}
+    }}
+    
+    /* Header animado */
+    .header-container {{
+        position: relative;
+        padding: 2rem;
+        background: linear-gradient(135deg, #000000 0%, #1A1A1A 100%);
+        border-bottom: 1px solid {CUSTOM_COLOR}40;
+        overflow: hidden;
+        margin-bottom: 1rem;
+    }}
+    
+    .digital-particles::before {{
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: 
+            radial-gradient(circle at 20% 30%, {CUSTOM_COLOR}10 2px, transparent 2px),
+            radial-gradient(circle at 80% 70%, {CUSTOM_COLOR}10 1px, transparent 1px);
+        background-size: 50px 50px, 30px 30px;
+        animation: float 20s infinite linear;
+    }}
+    
+    .main-title {{
+        font-family: 'Courier New', monospace;
+        font-size: 2rem;
+        font-weight: 700;
+        background: linear-gradient(45deg, #FFFFFF, {CUSTOM_COLOR});
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        text-align: center;
+        margin: 0;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+    }}
+    
+    .subtitle-container {{
+        position: relative;
+        overflow: hidden;
+        margin-top: 1rem;
+    }}
+    
+    .scanning-bar {{
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 20%;
+        background: linear-gradient(90deg, transparent, {CUSTOM_COLOR}80, transparent);
+        animation: scan 3s infinite linear;
+    }}
+    
+    .subtitle {{
+        color: #CCCCCC;
+        text-align: center;
+        font-size: 1rem;
+        margin: 0;
+        padding: 0.5rem;
+        position: relative;
+    }}
+    
+    .status-indicator {{
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: {CUSTOM_COLOR};
+        font-family: 'Courier New', monospace;
+        font-size: 0.8em;
+    }}
+    
+    .pulse-dot {{
+        width: 8px;
+        height: 8px;
+        background: {CUSTOM_COLOR};
+        border-radius: 50%;
+        animation: pulse 2s infinite;
+    }}
+    
+    /* Tarjetas cyberpunk */
+    .cyber-card {{
+        position: relative;
+        background: #1A1A1A;
+        border: 1px solid {CUSTOM_COLOR}40;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin: 1rem 0;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }}
+    
+    .cyber-card:hover {{
+        border-color: {CUSTOM_COLOR}80;
+        transform: translateY(-2px);
+        animation: glow 2s infinite;
+    }}
+    
+    .card-glow {{
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, var(--glow-color), transparent);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }}
+    
+    .cyber-card:hover .card-glow {{
+        opacity: 1;
+    }}
+    
+    .card-header {{
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+        border-bottom: 1px solid {CUSTOM_COLOR}20;
+        padding-bottom: 0.5rem;
+    }}
+    
+    .card-icon {{
+        font-size: 1.2em;
+    }}
+    
+    .card-title {{
+        color: {CUSTOM_COLOR};
+        font-family: 'Courier New', monospace;
+        font-size: 1em;
+        margin: 0;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }}
+    
+    /* Elementos de contenido */
+    .incident-header {{
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }}
+    
+    .type-badge {{
+        background: {CUSTOM_COLOR}20;
+        border: 1px solid {CUSTOM_COLOR}40;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        color: {CUSTOM_COLOR};
+        font-weight: bold;
+        font-size: 0.9em;
+    }}
+    
+    .confidence-meter {{
+        flex: 1;
+        min-width: 200px;
+    }}
+    
+    .meter-label {{
+        font-size: 0.8em;
+        color: #CCCCCC;
+        margin-bottom: 0.25rem;
+    }}
+    
+    .meter-bar {{
+        width: 100%;
+        height: 6px;
+        background: #333333;
+        border-radius: 3px;
+        overflow: hidden;
+    }}
+    
+    .meter-fill {{
+        height: 100%;
+        background: linear-gradient(90deg, {CUSTOM_COLOR}80, {CUSTOM_COLOR});
+        border-radius: 3px;
+        transition: width 1s ease-in-out;
+    }}
+    
+    .meter-value {{
+        text-align: right;
+        font-size: 0.9em;
+        color: {CUSTOM_COLOR};
+        margin-top: 0.25rem;
+    }}
+    
+    .summary-content {{
+        line-height: 1.6;
+        color: #E0E0E0;
+    }}
+    
+    .summary-text {{
+        font-size: 0.95em;
+    }}
+    
+    .entity-tags {{
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+    }}
+    
+    .entity-tag {{
+        padding: 0.25rem 0.75rem;
+        border-radius: 15px;
+        font-size: 0.8em;
+        font-family: 'Courier New', monospace;
+    }}
+    
+    .entity-tag.resource {{
+        background: {CUSTOM_COLOR}20;
+        color: {CUSTOM_COLOR};
+        border: 1px solid {CUSTOM_COLOR}40;
+    }}
+    
+    .entity-tag.ip {{
+        background: #2196F320;
+        color: #2196F3;
+        border: 1px solid #2196F340;
+    }}
+    
+    .entity-tag.id {{
+        background: #FF980020;
+        color: #FF9800;
+        border: 1px solid #FF980040;
+    }}
+    
+    .metrics-grid {{
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }}
+    
+    .metric-item {{
+        text-align: center;
+        padding: 1rem;
+        background: #252525;
+        border-radius: 6px;
+        border: 1px solid #333333;
+        transition: all 0.3s ease;
+    }}
+    
+    .metric-item:hover {{
+        border-color: {CUSTOM_COLOR}60;
+        transform: scale(1.05);
+    }}
+    
+    .metric-item.highlight {{
+        background: {CUSTOM_COLOR}15;
+        border-color: {CUSTOM_COLOR}40;
+    }}
+    
+    .metric-value {{
+        font-size: 1.3em;
+        font-weight: bold;
+        color: {CUSTOM_COLOR};
+        margin-bottom: 0.25rem;
+    }}
+    
+    .metric-label {{
+        font-size: 0.75em;
+        color: #CCCCCC;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }}
+    
+    /* Mejoras para los componentes de Gradio */
+    .gradio-container {{
+        background: #000000 !important;
+    }}
+    
+    .tab-nav {{
+        border-bottom: 1px solid {CUSTOM_COLOR}20 !important;
+    }}
+    
+    .tab-nav button {{
+        color: #CCCCCC !important;
+        border: 1px solid transparent !important;
+    }}
+    
+    .tab-nav button.selected {{
+        color: {CUSTOM_COLOR} !important;
+        border-color: {CUSTOM_COLOR} !important;
+        background: {CUSTOM_COLOR}10 !important;
+    }}
+    
+    .input-textarea, .output-textbox {{
+        background: #1A1A1A !important;
+        border: 1px solid #333333 !important;
+        color: #FFFFFF !important;
+    }}
+    
+    .input-textarea:focus, .output-textbox:focus {{
+        border-color: {CUSTOM_COLOR} !important;
+        box-shadow: 0 0 10px {CUSTOM_COLOR}40 !important;
+    }}
+    
+    .system-stats {{
+        font-size: 0.85em;
+    }}
+    
+    .stat-item {{
+        margin-bottom: 0.8rem;
+        padding-bottom: 0.8rem;
+        border-bottom: 1px solid #333333;
+    }}
+    
+    .stat-item:last-child {{
+        margin-bottom: 0;
+        padding-bottom: 0;
+        border-bottom: none;
+    }}
+    
+    .gpu-active {{
+        color: {CUSTOM_COLOR};
+        font-weight: bold;
+    }}
+    
+    .cpu-active {{
+        color: #FF9800;
+        font-weight: bold;
+    }}
+    
+    .waiting-message {{
+        text-align: center;
+        padding: 3rem;
+        color: #666666;
+        font-style: italic;
+    }}
+    
+    .error-message {{
+        text-align: center;
+        padding: 2rem;
+    }}
+</style>
+"""
+
+# --- CONFIGURACIÓN DEL MODELO ---
 device = 0 if torch.cuda.is_available() else -1
 print(f"Usando dispositivo CUDA: {device if device != -1 else 'CPU'}")
 
-# Carga del modelo de RESUMEN (BART-CNN)
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 summarizer = pipeline(
     "summarization", 
@@ -40,119 +581,31 @@ summarizer = pipeline(
     return_text=False 
 )
 
-# Carga del modelo de TRADUCCIÓN (Helsinki-NLP/opus-mt-en-es)
 translator = pipeline(
     "translation",
     model=TRANSLATION_MODEL_NAME,
     device=device
 )
-# ----------------------------------------
 
 def classify_incident_type(text):
-    """
-    Clasifica el tipo de incidente basándose en palabras clave.
-    """
     text_lower = text.lower()
-    
     for category, keywords in INCIDENT_CLASSIFICATIONS.items():
         if any(keyword in text_lower for keyword in keywords):
             return category
-            
     return "General/Otros"
 
-def generate_rich_summary_markdown(data):
-    """
-    Procesa el diccionario de salida y genera un resumen atractivo en Markdown.
-    Usa .get() para robustez total contra KeyErrors.
-    """
-    icon_map = {
-        "Software/Aplicación": "💻", "Redes/Conectividad": "🌐", 
-        "Infraestructura/Sistemas": "💾", "Base de datos": "🗄️", 
-        "Seguridad": "🔒", "Continuidad de Negocio": "♻️", 
-        "General/Otros": "📜"
-    }
-    
-    # Usamos .get() en cada paso para asegurar que no haya KeyErrors
-    summary = data.get('summary', 'Resumen no disponible.')
-    incident_type = data.get('incident_type', 'N/A')
-    entities = data.get('entities', {})
-    metrics = data.get('metadata', {})
-    
-    # Extracción segura de métricas
-    confidence = metrics.get('confidence_score', 'N/A')
-    original_words = metrics.get('original_words_count', 'N/A')
-    summary_words = metrics.get('summary_words_count', 'N/A')
-    reduction_percentage = metrics.get('reduction_percentage', 'N/A')
-    
-    # --- 1. CABECERA Y RESUMEN CONCISO ---
-    rich_md = f"""
-    <div style='border: 1px solid #10B981; border-radius: 8px; padding: 15px; background-color: #ECFDF5;'>
-        <h3 style='margin-top: 0; color: #065F46;'>{icon_map.get(incident_type, '📜')} Incidente Clasificado como: <span style='color: #047857;'>{incident_type}</span></h3>
-        <p><strong>Confianza Estimada:</strong> <span style='color: #059669;'>{confidence}</span></p>
-    </div>
-    
-    ---
-    
-    ## 📝 Resumen Ejecutivo
-    
-    {summary}
-    
-    ---
-    """
-    
-    # --- 2. ENTIDADES CLAVE ---
-    entity_md = "## 🔗 Entidades Detectadas\n"
-    
-    # Usamos .get(key, []) en el diccionario entities
-    resources = entities.get('resources', [])
-    ips = entities.get('ips', [])
-    ids = entities.get('incident_id', [])
-
-    if resources or ips or ids:
-        if resources:
-            entity_md += "### 💾 Recursos/Hostnames\n"
-            formatted_resources = [f"`{str(r)}`" for r in resources]
-            entity_md += "• " + " • ".join(formatted_resources) + "\n\n"
-
-        if ips:
-            entity_md += "### 🌐 Direcciones IP\n"
-            formatted_ips = [f"`{str(ip)}`" for ip in ips]
-            entity_md += "• " + " • ".join(formatted_ips) + "\n\n"
-
-        if ids:
-            entity_md += "### 🏷️ IDs de Incidente\n"
-            formatted_ids = [f"**{str(i)}**" for i in ids]
-            entity_md += "• " + " • ".join(formatted_ids) + "\n\n"
-    else:
-        entity_md += "⚠️ No se detectaron entidades clave (recursos, IPs, o IDs de incidente) en el texto.\n\n"
-        
-    rich_md += entity_md
-    
-    # --- 3. MÉTRICAS DE EFICIENCIA (Tabla) ---
-    # Usamos f-string para formatear las métricas de forma segura
-    rich_md += f"""
-    ---
-    ## 📈 Métricas de Procesamiento
-    
-    | Métrica | Valor |
-    | :--- | :--- |
-    | Palabras Originales | {original_words} |
-    | Palabras del Resumen | {summary_words} |
-    | **Reducción (%)** | **{reduction_percentage}%** |
-    """
-    
-    return rich_md
-
 def summarize_incident_and_process(text_input):
-    """
-    Ejecuta el resumen, lo traduce a español puro, clasifica y genera el JSON, 
-    devolviendo el JSON crudo y el resumen enriquecido en Markdown.
-    """
     if not text_input or len(text_input.split()) < MIN_LENGTH:
         error_msg = f"El texto es demasiado corto para generar un resumen significativo. Por favor, ingrese al menos {MIN_LENGTH} palabras."
-        return json.dumps({"status": "error", "message": error_msg}, indent=4), f"## ❌ Error\n{error_msg}"
+        error_card = create_cyber_card(
+            content=f"<div class='error-message'><h3>❌ ERROR</h3><p>{error_msg}</p></div>",
+            title="ERROR DEL SISTEMA",
+            icon="🚨",
+            glow_color="#ff4444"
+        )
+        return json.dumps({"status": "error", "message": error_msg}, indent=4), error_card
     
-    # 1. Generación de Resumen (BART-CNN)
+    # Procesamiento del resumen
     spanish_prompt_prefix = "Resuma este texto del incidente de TI de forma concisa, profesional y **exclusivamente en español**: "
     input_with_prompt = spanish_prompt_prefix + text_input
     
@@ -169,12 +622,9 @@ def summarize_incident_and_process(text_input):
     summary_result = summarizer(safe_text_input, **summary_params)
     bilingual_summary = summary_result[0]['summary_text']
     
-    # 2. POST-PROCESAMIENTO DE TRADUCCIÓN (Opus-MT)
-    # Usamos un max_length mayor para evitar el truncamiento
     translation_result = translator(bilingual_summary, max_length=260)
     summary_text_output = translation_result[0]['translation_text']
     
-    # Clasificación y JSON
     incident_type = classify_incident_type(text_input)
     confidence_score_estimate = 90.0 
     
@@ -185,7 +635,6 @@ def summarize_incident_and_process(text_input):
         'max_length': MAX_LENGTH
     }
     
-    # Llama a format_as_json para generar el JSON completo
     json_output = format_as_json(
         summary_text_output, 
         text_input, 
@@ -194,64 +643,81 @@ def summarize_incident_and_process(text_input):
         confidence=confidence_score_estimate
     )
     
-    # Genera la salida enriquecida a partir del diccionario JSON
     data_dict = json.loads(json_output)
     rich_markdown_output = generate_rich_summary_markdown(data_dict)
     
     return json_output, rich_markdown_output
 
-
-# --- AJUSTE DE LA INTERFAZ GRADIO (Final) ---
-
-with gr.Blocks(theme=CUSTOM_THEME, title="Microagente de Resumen de Incidentes de TI") as iface:
+# --- INTERFAZ GRADIO COMPATIBLE ---
+with gr.Blocks(theme=CUSTOM_THEME, css=CUSTOM_CSS, title="🤖 CyberAnalyzer - Sistema de Análisis de Incidentes") as iface:
     
-    gr.Markdown("# 🤖 Microagente de Resumen de Incidentes de TI")
-    gr.Markdown("Pegue el texto de un incidente de TI y obtenga un resumen conciso y enriquecido en español.")
+    # Header animado
+    gr.HTML(create_animated_header())
     
-    metadata_markdown = gr.Markdown(
-        f"""
-        <div style='background-color: #F3F4F6; padding: 10px; border-radius: 5px;'>
-            | Parámetro | Valor |
-            | :--- | :--- |
-            | **Modelo de Resumen** | `{MODEL_NAME}` |
-            | **Modelo de Traducción** | `{TRANSLATION_MODEL_NAME}` |
-            | **Dispositivo** | `{'GPU (CUDA)' if device != -1 else 'CPU'}` |
-        </div>
-        """,
-    )
-    
+    # Panel de información del sistema
     with gr.Row():
-        text_input = gr.Textbox(
-            lines=INPUT_LINES, 
-            label=f"Texto Completo del Incidente (Mín. {MIN_LENGTH} palabras)",
-            placeholder="Pegue aquí el historial de logs, chats y notas del incidente..."
-        )
-        
-    
-    with gr.Tabs():
-        with gr.TabItem("✅ Resumen Enriquecido (Recomendado)"): 
-            # Output 2 (Markdown)
-            rich_output_markdown = gr.Markdown(
-                "El resumen enriquecido aparecerá aquí después del procesamiento.", 
-                elem_id="rich_output"
+        with gr.Column(scale=3):
+            gr.Markdown("### 🎯 INGRESE EL TEXTO DEL INCIDENTE")
+            text_input = gr.Textbox(
+                lines=INPUT_LINES, 
+                label="",
+                placeholder=f"📋 Pegue aquí el historial completo del incidente (mínimo {MIN_LENGTH} palabras requeridas)...",
+                show_label=False
             )
-
-        with gr.TabItem("⚙️ Salida JSON Cruda"):
-            # Output 1 (Raw JSON Textbox)
+        with gr.Column(scale=1):
+            system_info_html = create_cyber_card(
+                content=f"""
+                <div class="system-stats">
+                    <div class="stat-item">
+                        <strong>Modelo de Resumen:</strong><br>
+                        <code>{MODEL_NAME.split('/')[-1]}</code>
+                    </div>
+                    <div class="stat-item">
+                        <strong>Modelo de Traducción:</strong><br>
+                        <code>{TRANSLATION_MODEL_NAME.split('/')[-1]}</code>
+                    </div>
+                    <div class="stat-item">
+                        <strong>Dispositivo:</strong><br>
+                        <span class="{'gpu-active' if device != -1 else 'cpu-active'}">
+                            {'⚡ GPU (CUDA)' if device != -1 else '💻 CPU'}
+                        </span>
+                    </div>
+                </div>
+                """,
+                title="ESTADO DEL SISTEMA",
+                icon="🖥️"
+            )
+            gr.HTML(system_info_html)
+    
+    # Botón de acción principal
+    with gr.Row():
+        analyze_btn = gr.Button(
+            "🚀 INICIAR ANÁLISIS AUTOMÁTICO", 
+            variant="primary", 
+            scale=1
+        )
+    
+    # Pestañas de resultados
+    with gr.Tabs():
+        with gr.TabItem("📊 PANEL DE ANÁLISIS"):
+            rich_output_markdown = gr.HTML(
+                "<div class='waiting-message'>⏳ El sistema está listo. Ingrese un incidente y haga clic en 'INICIAR ANÁLISIS AUTOMÁTICO'</div>"
+            )
+        
+        with gr.TabItem("⚙️ DATOS TÉCNICOS (JSON)"):
             json_output_textbox = gr.Textbox(
                 lines=OUTPUT_LINES, 
-                label="JSON Crudo (Salida del API)", 
-                elem_id="rich_output_json"
+                label="SALIDA JSON CRUDA",
+                show_label=True
             )
-
-    # Conexión de la función a los outputs
-    gr.Button("Generar Análisis y Resumen", variant="primary").click(
+    
+    # Conectar el botón
+    analyze_btn.click(
         fn=summarize_incident_and_process, 
         inputs=text_input, 
-        outputs=[json_output_textbox, rich_output_markdown] # Asegurar el orden (JSON, Markdown)
+        outputs=[json_output_textbox, rich_output_markdown]
     )
 
-    
 iface.launch(
     server_name=SERVER_NAME,
     server_port=SERVER_PORT,
