@@ -15,24 +15,20 @@ from config import (
 CUSTOM_COLOR = "#C9F70E" # Verde Limón
 
 # Definición del tema personalizado
-CUSTOM_THEME = gr.themes.Soft(
-    primary_hue=gr.themes.Color(
-        name="lime", 
-        # Tonalidades claras y oscuras basadas en el color deseado
-        # Se asegura que el color principal (botones, focos) sea el verde limón.
-        c50=CUSTOM_COLOR, c100=CUSTOM_COLOR, c200=CUSTOM_COLOR, 
-        c300=CUSTOM_COLOR, c400=CUSTOM_COLOR, c500=CUSTOM_COLOR, 
-        c600=CUSTOM_COLOR, c700=CUSTOM_COLOR, c800=CUSTOM_COLOR, 
-        c900=CUSTOM_COLOR, c950=CUSTOM_COLOR,
-    ),
-).set(
-    # Ajustes finos para garantizar la legibilidad y la combinación
-    # El color primario se usará en botones, sliders, y el borde del foco.
+CUSTOM_THEME = gr.themes.Soft().set(
+    # FONDOS
+    background_fill_primary="#FFFFFF",
+    background_fill_secondary="#F5F5F5",
+
+    # COLORES DE ÉNFASIS (Se aplica el color verde limón a los botones primarios y acentos)
+    # primary_500 es el color usado por Gradio para la mayoría de los acentos
+    color_accent_soft=CUSTOM_COLOR,
+    color_accent_fg=CUSTOM_COLOR,
+
+    # BOTONES PRIMARIOS (El más importante: el color del texto)
     button_primary_background_fill=CUSTOM_COLOR,
     button_primary_border_color=CUSTOM_COLOR,
-    button_primary_text_color="#000000", # Texto negro para alto contraste
-    background_fill_primary="#000000",
-    background_fill_secondary="#F5F5F5",
+    button_primary_text_color="#000000", # <--- ¡Texto negro forzado!
 )
 
 # --- CONFIGURACIÓN DE MODELO E INICIO ---
@@ -240,14 +236,17 @@ with gr.Blocks(theme=CUSTOM_THEME, title="Microagente de Resumen de Incidentes d
     with gr.Tabs():
         with gr.TabItem("✅ Resumen Enriquecido (Recomendado)"): 
             # Output 2 (Markdown)
-            rich_output_markdown = gr.Markdown("El resumen enriquecido aparecerá aquí después del procesamiento.", elem_id="rich_output")
-            
+            rich_output_markdown = gr.Markdown(
+                "El resumen enriquecido aparecerá aquí después del procesamiento.", 
+                elem_id="rich_output"
+            )
+
         with gr.TabItem("⚙️ Salida JSON Cruda"):
             # Output 1 (Raw JSON Textbox)
             json_output_textbox = gr.Textbox(
                 lines=OUTPUT_LINES, 
                 label="JSON Crudo (Salida del API)", 
-                elem_id="scrollable-output"
+                elem_id="rich_output_json"
             )
 
     # Conexión de la función a los outputs
