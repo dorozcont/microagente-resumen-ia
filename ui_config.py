@@ -9,7 +9,7 @@ CUSTOM_COLOR = "#C9F70E"  # Verde Limón
 
 # Tema simplificado y compatible
 CUSTOM_THEME = gr.themes.Default(
-    primary_hue="#414141",
+    primary_hue="gray",
     neutral_hue="slate"
 ).set(
     button_primary_background_fill=CUSTOM_COLOR,
