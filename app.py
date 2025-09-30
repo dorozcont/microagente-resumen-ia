@@ -12,6 +12,29 @@ from config import (
     INCIDENT_CLASSIFICATIONS, TRANSLATION_MODEL_NAME # <--- ¡Importación completa!
 )
 
+CUSTOM_COLOR = "#C9F70E" # Verde Limón
+
+# Definición del tema personalizado
+CUSTOM_THEME = gr.themes.Soft(
+    primary_hue=gr.themes.Color(
+        name="lime", 
+        # Tonalidades claras y oscuras basadas en el color deseado
+        # Se asegura que el color principal (botones, focos) sea el verde limón.
+        c50=CUSTOM_COLOR, c100=CUSTOM_COLOR, c200=CUSTOM_COLOR, 
+        c300=CUSTOM_COLOR, c400=CUSTOM_COLOR, c500=CUSTOM_COLOR, 
+        c600=CUSTOM_COLOR, c700=CUSTOM_COLOR, c800=CUSTOM_COLOR, 
+        c900=CUSTOM_COLOR, c950=CUSTOM_COLOR,
+    ),
+).set(
+    # Ajustes finos para garantizar la legibilidad y la combinación
+    # El color primario se usará en botones, sliders, y el borde del foco.
+    button_primary_background_fill=CUSTOM_COLOR,
+    button_primary_border_color=CUSTOM_COLOR,
+    button_primary_text_color="#000000", # Texto negro para alto contraste
+    background_fill_primary="#FFFFFF",
+    background_fill_secondary="#F5F5F5",
+)
+
 # --- CONFIGURACIÓN DE MODELO E INICIO ---
 device = 0 if torch.cuda.is_available() else -1
 print(f"Usando dispositivo CUDA: {device if device != -1 else 'CPU'}")
@@ -97,15 +120,18 @@ def generate_rich_summary_markdown(data):
     if resources or ips or ids:
         if resources:
             entity_md += "### 💾 Recursos/Hostnames\n"
-            entity_md += "• " + " • ".join([f"`{r}`" for r in resources]) + "\n\n"
+            formatted_resources = [f"`{str(r)}`" for r in resources]
+            entity_md += "• " + " • ".join(formatted_resources) + "\n\n"
 
         if ips:
             entity_md += "### 🌐 Direcciones IP\n"
-            entity_md += "• " + " • ".join([f"`{ip}`" for ip in ips]) + "\n\n"
+            formatted_ips = [f"`{str(ip)}`" for ip in ips]
+            entity_md += "• " + " • ".join(formatted_ips) + "\n\n"
 
         if ids:
             entity_md += "### 🏷️ IDs de Incidente\n"
-            entity_md += "• " + " • ".join([f"**{i}**" for i in ids]) + "\n\n"
+            formatted_ids = [f"**{str(i)}**" for i in ids]
+            entity_md += "• " + " • ".join(formatted_ids) + "\n\n"
     else:
         entity_md += "⚠️ No se detectaron entidades clave (recursos, IPs, o IDs de incidente) en el texto.\n\n"
         
@@ -186,7 +212,7 @@ def summarize_incident_and_process(text_input):
 
 # --- AJUSTE DE LA INTERFAZ GRADIO (Final) ---
 
-with gr.Blocks(theme='soft', title="Microagente de Resumen de Incidentes de TI") as iface:
+with gr.Blocks(theme=CUSTOM_THEME, title="Microagente de Resumen de Incidentes de TI") as iface:
     
     gr.Markdown("# 🤖 Microagente de Resumen de Incidentes de TI")
     gr.Markdown("Pegue el texto de un incidente de TI y obtenga un resumen conciso y enriquecido en español.")
@@ -221,7 +247,7 @@ with gr.Blocks(theme='soft', title="Microagente de Resumen de Incidentes de TI")
             json_output_textbox = gr.Textbox(
                 lines=OUTPUT_LINES, 
                 label="JSON Crudo (Salida del API)", 
-                elem_id="json_output"
+                elem_id="scrollable-output"
             )
 
     # Conexión de la función a los outputs
