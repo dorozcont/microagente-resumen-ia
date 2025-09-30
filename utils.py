@@ -48,9 +48,9 @@ def extract_entities(text):
 
     # Llenar el diccionario de salida SOLO si el conjunto no está vacío.
     # El código de app.py debe usar .get(key, []) para evitar KeyErrors.
-    if resources: entities['resources'] = list(resources) 
-    if ips_set: entities['ips'] = list(ips_set)
-    if incident_ids_set: entities['incident_id'] = list(incident_ids_set)
+    if resources: entities['resources'] = [str(r) for r in resources] # Fuerza a STR
+    if ips_set: entities['ips'] = [str(ip) for ip in ips_set]        # Fuerza a STR
+    if incident_ids_set: entities['incident_id'] = [str(i) for i in incident_ids_set] # Fuerza a STR
 
     # Conteo de entidades (mantenido)
     entity_counts = {k: len(v) for k, v in entities.items()}
@@ -67,6 +67,7 @@ def format_as_json(summary_text, original_text, incident_type="N/A", model_metad
     # Métricas de conteo
     original_words_count = len(original_text.split())
     summary_words_count = len(summary_text.split())
+    metadata['entity_counts'] = entity_counts
     
     # Porcentaje de disminución
     reduction_percentage = round((1 - (summary_words_count / original_words_count)) * 100, 2) if original_words_count > 0 else 0
