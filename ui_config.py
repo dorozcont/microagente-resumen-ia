@@ -201,47 +201,10 @@ def create_system_info_card(device, model_name, translation_model_name):
         icon="🖥️"
     )
 
-def create_interface_components(device):
-    """Crea y retorna todos los componentes de la interfaz"""
-    # Panel de información del sistema
-    system_info = create_system_info_card(device, MODEL_NAME, TRANSLATION_MODEL_NAME)
-    
-    # Componentes principales
-    text_input = gr.Textbox(
-        lines=INPUT_LINES, 
-        label="",
-        placeholder=f"📋 Pegue aquí el historial completo del incidente (mínimo {MIN_LENGTH} palabras requeridas)...",
-        show_label=False
-    )
-    
-    analyze_btn = gr.Button(
-        "🚀 INICIAR ANÁLISIS AUTOMÁTICO", 
-        variant="primary", 
-        scale=1
-    )
-    
-    rich_output = gr.HTML(
-        "<div class='waiting-message'>⏳ El sistema está listo. Ingrese un incidente y haga clic en 'INICIAR ANÁLISIS AUTOMÁTICO'</div>"
-    )
-    
-    json_output = gr.Textbox(
-        lines=OUTPUT_LINES, 
-        label="SALIDA JSON CRUDA",
-        show_label=True
-    )
-    
-    return {
-        'system_info': system_info,
-        'text_input': text_input,
-        'analyze_btn': analyze_btn,
-        'rich_output': rich_output,
-        'json_output': json_output
-    }
-
-# CSS personalizado para efectos futuristas
+# CSS personalizado para efectos futuristas (se mantiene igual)
 CUSTOM_CSS = f"""
 <style>
-    /* Animaciones y efectos globales */
+    /* Tu CSS completo aquí (se mantiene igual que antes) */
     @keyframes glow {{
         0%, 100% {{ box-shadow: 0 0 5px {CUSTOM_COLOR}40; }}
         50% {{ box-shadow: 0 0 20px {CUSTOM_COLOR}80, 0 0 30px {CUSTOM_COLOR}40; }}

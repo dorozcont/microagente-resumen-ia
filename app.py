@@ -1,4 +1,4 @@
-# app.py - Versión Simplificada y Limpia
+# app.py
 
 import json
 import torch
@@ -15,7 +15,7 @@ from config import (
 )
 from ui_config import (
     CUSTOM_THEME, CUSTOM_CSS, create_animated_header,
-    generate_rich_summary_markdown, create_interface_components
+    generate_rich_summary_markdown, create_system_info_card
 )
 
 # --- CONFIGURACIÓN DEL MODELO ---
@@ -50,21 +50,25 @@ def classify_incident_type(text):
             return category
     return "General/Otros"
 
+def create_error_response(error_msg):
+    """Crea una respuesta de error estandarizada"""
+    from ui_config import create_cyber_card
+    error_output = json.dumps({"status": "error", "message": error_msg}, indent=4)
+    error_card = create_cyber_card(
+        content=f"<div class='error-message'><h3>❌ ERROR</h3><p>{error_msg}</p></div>",
+        title="ERROR DEL SISTEMA",
+        icon="🚨",
+        glow_color="#ff4444"
+    )
+    return error_output, error_card
+
 def summarize_incident_and_process(text_input, tokenizer, summarizer, translator):
     """
     Procesa el texto del incidente: resume, traduce y genera salidas
     """
     if not text_input or len(text_input.split()) < MIN_LENGTH:
         error_msg = f"El texto es demasiado corto. Mínimo {MIN_LENGTH} palabras requeridas."
-        error_output = json.dumps({"status": "error", "message": error_msg}, indent=4)
-        from ui_config import create_cyber_card
-        error_card = create_cyber_card(
-            content=f"<div class='error-message'><h3>❌ ERROR</h3><p>{error_msg}</p></div>",
-            title="ERROR DEL SISTEMA",
-            icon="🚨",
-            glow_color="#ff4444"
-        )
-        return error_output, error_card
+        return create_error_response(error_msg)
     
     try:
         # 1. Generación de Resumen
@@ -115,15 +119,7 @@ def summarize_incident_and_process(text_input, tokenizer, summarizer, translator
         
     except Exception as e:
         error_msg = f"Error en el procesamiento: {str(e)}"
-        error_output = json.dumps({"status": "error", "message": error_msg}, indent=4)
-        from ui_config import create_cyber_card
-        error_card = create_cyber_card(
-            content=f"<div class='error-message'><h3>❌ ERROR DE PROCESAMIENTO</h3><p>{error_msg}</p></div>",
-            title="ERROR DEL SISTEMA",
-            icon="🚨",
-            glow_color="#ff4444"
-        )
-        return error_output, error_card
+        return create_error_response(error_msg)
 
 # --- CONFIGURACIÓN DE LA INTERFAZ ---
 def create_interface(device, tokenizer, summarizer, translator):
@@ -135,34 +131,47 @@ def create_interface(device, tokenizer, summarizer, translator):
         # Header animado
         gr.HTML(create_animated_header())
         
-        # Obtener componentes de la interfaz
-        components = create_interface_components(device)
-        
         # Panel principal
         with gr.Row():
             with gr.Column(scale=3):
                 gr.Markdown("### 🎯 INGRESE EL TEXTO DEL INCIDENTE")
-                components['text_input'].render()
+                text_input = gr.Textbox(
+                    lines=10, 
+                    label="",
+                    placeholder=f"📋 Pegue aquí el historial completo del incidente (mínimo {MIN_LENGTH} palabras requeridas)...",
+                    show_label=False
+                )
             with gr.Column(scale=1):
-                gr.HTML(components['system_info'])
+                system_info = create_system_info_card(device, MODEL_NAME, TRANSLATION_MODEL_NAME)
+                gr.HTML(system_info)
         
         # Botón de acción
         with gr.Row():
-            components['analyze_btn'].render()
+            analyze_btn = gr.Button(
+                "🚀 INICIAR ANÁLISIS AUTOMÁTICO", 
+                variant="primary", 
+                scale=1
+            )
         
         # Pestañas de resultados
         with gr.Tabs():
             with gr.TabItem("📊 PANEL DE ANÁLISIS"):
-                components['rich_output'].render()
+                rich_output = gr.HTML(
+                    "<div class='waiting-message'>⏳ El sistema está listo. Ingrese un incidente y haga clic en 'INICIAR ANÁLISIS AUTOMÁTICO'</div>"
+                )
             
             with gr.TabItem("⚙️ DATOS TÉCNICOS (JSON)"):
-                components['json_output'].render()
+                json_output = gr.Textbox(
+                    lines=10, 
+                    label="SALIDA JSON CRUDA",
+                    show_label=True
+                )
         
         # Conectar el botón con la función de procesamiento
-        components['analyze_btn'].click(
+        analyze_btn.click(
             fn=lambda text: summarize_incident_and_process(text, tokenizer, summarizer, translator),
-            inputs=components['text_input'],
-            outputs=[components['json_output'], components['rich_output']]
+            inputs=text_input,
+            outputs=[json_output, rich_output]
         )
     
     return iface
