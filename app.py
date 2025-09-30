@@ -1,4 +1,4 @@
-# app.py - Versión Futurista (Compatible con Gradio 4.44.1)
+# app.py - Versión Futurista (Compatible con Docker)
 
 import json
 import time
@@ -15,38 +15,20 @@ from config import (
 
 CUSTOM_COLOR = "#C9F70E"  # Verde Limón
 
-# Tema compatible con Gradio 4.44.1
+# Tema simplificado y compatible
 CUSTOM_THEME = gr.themes.Default(
     primary_hue="green",
     neutral_hue="slate"
 ).set(
-    # FONDOS OSCUROS
-    background_fill_primary="#000000",
-    background_fill_secondary="#0A0A0A",
-    block_background_fill="#111111",
-    block_label_background_fill="#1A1A1A",
-    block_border_color="#333333",
-    
-    # COLORES DE ÉNFASIS
-    color_accent_soft=CUSTOM_COLOR + "20",
-    color_accent_fg=CUSTOM_COLOR,
-    
-    # BOTONES PRIMARIOS
+    # Configuración básica compatible
     button_primary_background_fill=CUSTOM_COLOR,
-    button_primary_background_fill_hover=CUSTOM_COLOR + "CC",
-    button_primary_border_color=CUSTOM_COLOR,
     button_primary_text_color="#000000",
-    button_primary_border_color_hover=CUSTOM_COLOR,
-    
-    # TEXTOS
-    body_text_color="#FFFFFF",
-    block_label_text_color=CUSTOM_COLOR,
-    block_title_text_color="#FFFFFF",
+    button_primary_border_color=CUSTOM_COLOR,
 )
 
 def create_animated_header():
     """Crea un header animado con efecto de partículas digitales"""
-    return """
+    return f"""
     <div class="header-container">
         <div class="digital-particles"></div>
         <div class="header-content">
@@ -225,6 +207,12 @@ CUSTOM_CSS = f"""
     @keyframes float {{
         0%, 100% {{ transform: translateY(0px); }}
         50% {{ transform: translateY(-5px); }}
+    }}
+    
+    /* Fondo general oscuro */
+    .gradio-container {{
+        background: #000000 !important;
+        color: #FFFFFF !important;
     }}
     
     /* Header animado */
@@ -497,35 +485,10 @@ CUSTOM_CSS = f"""
         letter-spacing: 0.5px;
     }}
     
-    /* Mejoras para los componentes de Gradio */
-    .gradio-container {{
-        background: #000000 !important;
-    }}
-    
-    .tab-nav {{
-        border-bottom: 1px solid {CUSTOM_COLOR}20 !important;
-    }}
-    
-    .tab-nav button {{
-        color: #CCCCCC !important;
-        border: 1px solid transparent !important;
-    }}
-    
-    .tab-nav button.selected {{
-        color: {CUSTOM_COLOR} !important;
-        border-color: {CUSTOM_COLOR} !important;
-        background: {CUSTOM_COLOR}10 !important;
-    }}
-    
-    .input-textarea, .output-textbox {{
+    /* Estilos para componentes de Gradio */
+    .panel {{
         background: #1A1A1A !important;
         border: 1px solid #333333 !important;
-        color: #FFFFFF !important;
-    }}
-    
-    .input-textarea:focus, .output-textbox:focus {{
-        border-color: {CUSTOM_COLOR} !important;
-        box-shadow: 0 0 10px {CUSTOM_COLOR}40 !important;
     }}
     
     .system-stats {{
@@ -564,6 +527,30 @@ CUSTOM_CSS = f"""
     .error-message {{
         text-align: center;
         padding: 2rem;
+    }}
+    
+    /* Ajustes para inputs y outputs */
+    textarea, input {{
+        background: #1A1A1A !important;
+        border: 1px solid #333333 !important;
+        color: #FFFFFF !important;
+    }}
+    
+    .tabs {{
+        border: 1px solid #333333 !important;
+    }}
+    
+    .tab-nav {{
+        background: #1A1A1A !important;
+    }}
+    
+    .tab-nav button {{
+        color: #CCCCCC !important;
+    }}
+    
+    .tab-nav button.selected {{
+        color: {CUSTOM_COLOR} !important;
+        border-bottom: 2px solid {CUSTOM_COLOR} !important;
     }}
 </style>
 """
