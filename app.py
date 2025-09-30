@@ -20,12 +20,7 @@ CUSTOM_THEME = gr.themes.Soft().set(
     background_fill_primary="#FFFFFF",
     background_fill_secondary="#F5F5F5",
 
-    # COLORES DE ÉNFASIS (Se aplica el color verde limón a los botones primarios y acentos)
-    # primary_500 es el color usado por Gradio para la mayoría de los acentos
-    color_accent_soft=CUSTOM_COLOR,
-    color_accent_fg=CUSTOM_COLOR,
-
-    # BOTONES PRIMARIOS (El más importante: el color del texto)
+    # BOTONES PRIMARIOS (Solución forzada para texto negro y el color deseado)
     button_primary_background_fill=CUSTOM_COLOR,
     button_primary_border_color=CUSTOM_COLOR,
     button_primary_text_color="#000000", # <--- ¡Texto negro forzado!
