@@ -31,8 +31,7 @@ CUSTOM_THEME = gr.themes.Soft(
     button_primary_background_fill=CUSTOM_COLOR,
     button_primary_border_color=CUSTOM_COLOR,
     button_primary_text_color="#000000", # Texto negro para alto contraste
-    button_primary_border_width='0px', 
-    background_fill_primary="#FFFFFF",
+    background_fill_primary="#000000",
     background_fill_secondary="#F5F5F5",
 )
 
