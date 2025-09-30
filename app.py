@@ -49,6 +49,7 @@ def classify_incident_type(text):
 def generate_rich_summary_markdown(data):
     """
     Procesa el diccionario de salida y genera un resumen atractivo en Markdown.
+    Usa .get() para robustez total contra KeyErrors.
     """
     icon_map = {
         "Software/Aplicación": "💻", "Redes/Conectividad": "🌐", 
@@ -57,14 +58,19 @@ def generate_rich_summary_markdown(data):
         "General/Otros": "📜"
     }
     
-    summary = data['summary']
-    incident_type = data['incident_type']
-    confidence = data['metadata'].get('confidence_score', 'N/A')
-    entities = data['entities']
-    metrics = data['metadata']
+    # Usamos .get() en cada paso para asegurar que no haya KeyErrors
+    summary = data.get('summary', 'Resumen no disponible.')
+    incident_type = data.get('incident_type', 'N/A')
+    entities = data.get('entities', {})
+    metrics = data.get('metadata', {})
+    
+    # Extracción segura de métricas
+    confidence = metrics.get('confidence_score', 'N/A')
+    original_words = metrics.get('original_words_count', 'N/A')
+    summary_words = metrics.get('summary_words_count', 'N/A')
+    reduction_percentage = metrics.get('reduction_percentage', 'N/A')
     
     # --- 1. CABECERA Y RESUMEN CONCISO ---
-    # Usamos .get() para la confianza por si no está seteada.
     rich_md = f"""
     <div style='border: 1px solid #10B981; border-radius: 8px; padding: 15px; background-color: #ECFDF5;'>
         <h3 style='margin-top: 0; color: #065F46;'>{icon_map.get(incident_type, '📜')} Incidente Clasificado como: <span style='color: #047857;'>{incident_type}</span></h3>
@@ -83,7 +89,7 @@ def generate_rich_summary_markdown(data):
     # --- 2. ENTIDADES CLAVE ---
     entity_md = "## 🔗 Entidades Detectadas\n"
     
-    # Usamos .get(key, []) para asegurar que no haya un KeyError si la lista está vacía.
+    # Usamos .get(key, []) en el diccionario entities
     resources = entities.get('resources', [])
     ips = entities.get('ips', [])
     ids = entities.get('incident_id', [])
@@ -106,16 +112,17 @@ def generate_rich_summary_markdown(data):
     rich_md += entity_md
     
     # --- 3. MÉTRICAS DE EFICIENCIA (Tabla) ---
-    rich_md += """
+    # Usamos f-string para formatear las métricas de forma segura
+    rich_md += f"""
     ---
     ## 📈 Métricas de Procesamiento
     
     | Métrica | Valor |
     | :--- | :--- |
-    | Palabras Originales | {original_words_count} |
-    | Palabras del Resumen | {summary_words_count} |
+    | Palabras Originales | {original_words} |
+    | Palabras del Resumen | {summary_words} |
     | **Reducción (%)** | **{reduction_percentage}%** |
-    """.format(**metrics)
+    """
     
     return rich_md
 
