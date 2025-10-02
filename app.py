@@ -25,19 +25,29 @@ def setup_models():
     print(f"Usando dispositivo: {'GPU (CUDA)' if device != -1 else 'CPU'}")
     
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+
+    # CUANTIZACIÓN FP16 (si hay GPU)
+    torch_dtype = torch.float16 if device != -1 else torch.float32
+
     summarizer = pipeline(
         "summarization", 
         model=MODEL_NAME, 
         tokenizer=tokenizer,
         device=device,
+        torch_dtype=torch_dtype,  # ← CUANTIZACIÓN
         return_text=False 
     )
     
     translator = pipeline(
         "translation",
         model=TRANSLATION_MODEL_NAME,
-        device=device
+        device=device,
+        torch_dtype=torch_dtype   # ← CUANTIZACIÓN
     )
+
+    # Informar estado de cuantización
+    quantization_status = "FP16" if torch_dtype == torch.float16 else "FP32"
+    print(f"✅ Modelo cuantizado en: {quantization_status}")
     
     return device, tokenizer, summarizer, translator
 
